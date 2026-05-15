@@ -1,0 +1,8 @@
+{
+  "name": "Rumal Distribution Tracker",
+  "description": "Shehrullah Rumal Distrubation tracker with Excel import/export, analytics, and persistent state.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
