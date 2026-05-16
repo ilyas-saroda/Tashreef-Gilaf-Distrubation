@@ -2,12 +2,7 @@ import React from 'react';
 import { Edit3, Check, X } from 'lucide-react';
 import { motion } from 'motion/react';
 
-interface TitleHeaderProps {
-  appTitle: string;
-  onChangeTitle: (newTitle: string) => void;
-}
-
-export function TitleHeader({ appTitle, onChangeTitle }: TitleHeaderProps) {
+export function TitleHeader({ appTitle, onChangeTitle }) {
   const [isEditingTitle, setIsEditingTitle] = React.useState(false);
   const [tempTitle, setTempTitle] = React.useState(appTitle);
 
