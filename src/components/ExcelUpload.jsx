@@ -1,29 +1,24 @@
 import React from 'react';
 import * as XLSX from 'xlsx';
-import { Upload, FileSpreadsheet, X } from 'lucide-react';
-import { RumalEntry, DistributionStatus } from '../types';
+import { Upload, FileSpreadsheet } from 'lucide-react';
 import { cn } from '../lib/utils';
 
-interface ExcelUploadProps {
-  onUpload: (data: RumalEntry[]) => void;
-}
-
-export const ExcelUpload: React.FC<ExcelUploadProps> = ({ onUpload }) => {
+export const ExcelUpload = ({ onUpload }) => {
   const [isDragging, setIsDragging] = React.useState(false);
-  const fileInputRef = React.useRef<HTMLInputElement>(null);
+  const fileInputRef = React.useRef(null);
 
-  const processFile = (file: File) => {
+  const processFile = (file) => {
     const reader = new FileReader();
     reader.onload = (e) => {
       const bstr = e.target?.result;
       const workbook = XLSX.read(bstr, { type: 'binary' });
       const wsname = workbook.SheetNames[0];
       const ws = workbook.Sheets[wsname];
-      const data = XLSX.utils.sheet_to_json(ws) as any[];
+      const data = XLSX.utils.sheet_to_json(ws);
 
-      const mappedData: RumalEntry[] = data.map((item) => {
+      const mappedData = data.map((item) => {
         // Find keys case-insensitively
-        const findVal = (keys: string[]) => {
+        const findVal = (keys) => {
           const foundKey = Object.keys(item).find(k => 
             keys.some(search => k.toLowerCase() === search.toLowerCase())
           );
@@ -31,7 +26,7 @@ export const ExcelUpload: React.FC<ExcelUploadProps> = ({ onUpload }) => {
         };
 
         let rawStatus = findVal(['Status', 'Action', 'Remarks', 'Remark']);
-        let normalizedStatus: DistributionStatus = 'Pending';
+        let normalizedStatus = 'Pending';
         let extractedReceiver = '';
 
         if (rawStatus) {
@@ -65,7 +60,7 @@ export const ExcelUpload: React.FC<ExcelUploadProps> = ({ onUpload }) => {
     reader.readAsBinaryString(file);
   };
 
-  const handleDrop = (e: React.DragEvent) => {
+  const handleDrop = (e) => {
     e.preventDefault();
     setIsDragging(false);
     const file = e.dataTransfer.files[0];

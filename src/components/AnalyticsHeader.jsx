@@ -1,13 +1,8 @@
 import React from 'react';
 import { Users, CheckCircle2, AlertCircle } from 'lucide-react';
-import { Analytics } from '../types';
 import { motion } from 'motion/react';
 
-interface AnalyticsHeaderProps {
-  analytics: Analytics;
-}
-
-export const AnalyticsHeader: React.FC<AnalyticsHeaderProps> = ({ analytics }) => {
+export const AnalyticsHeader = ({ analytics }) => {
   const cards = [
     {
       title: 'Total Registered',

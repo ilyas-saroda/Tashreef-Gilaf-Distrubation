@@ -1,19 +1,9 @@
 import React from 'react';
 import { Search, ChevronLeft, ChevronRight, Download, Filter, User, CheckCircle2, FileSpreadsheet, Trash2 } from 'lucide-react';
-import { RumalEntry, DistributionStatus } from '../types';
 import { cn } from '../lib/utils';
 import * as XLSX from 'xlsx';
 
-interface DistributionTableProps {
-  data: RumalEntry[];
-  onStatusChange: (hofId: string | number, newStatus: DistributionStatus) => void;
-  onReceivedByChange: (hofId: string | number, newName: string) => void;
-  onClearUpdateInfo: (hofId: string | number) => void;
-  onExport: (dataToExport: RumalEntry[]) => void;
-  onImportNew: () => void;
-}
-
-export const DistributionTable: React.FC<DistributionTableProps> = ({ 
+export const DistributionTable = ({ 
   data, 
   onStatusChange,
   onReceivedByChange,
@@ -22,18 +12,18 @@ export const DistributionTable: React.FC<DistributionTableProps> = ({
   onImportNew
 }) => {
   const [searchTerm, setSearchTerm] = React.useState('');
-  const [statusFilter, setStatusFilter] = React.useState<string>('All');
-  const [receiverFilter, setReceiverFilter] = React.useState<string>('All');
-  const [dateFilter, setDateFilter] = React.useState<string>('All');
-  const [dayFilter, setDayFilter] = React.useState<string>('All');
+  const [statusFilter, setStatusFilter] = React.useState('All');
+  const [receiverFilter, setReceiverFilter] = React.useState('All');
+  const [dateFilter, setDateFilter] = React.useState('All');
+  const [dayFilter, setDayFilter] = React.useState('All');
   const [currentPage, setCurrentPage] = React.useState(1);
   const rowsPerPage = 15;
 
   // Get unique values for filters with counts
   const filterOptions = React.useMemo(() => {
-    const receivers = new Map<string, number>();
-    const dates = new Map<string, number>();
-    const days = new Map<string, number>();
+    const receivers = new Map();
+    const dates = new Map();
+    const days = new Map();
     const statuses = {
       Pending: 0,
       Given: 0,
@@ -43,7 +33,7 @@ export const DistributionTable: React.FC<DistributionTableProps> = ({
     data.forEach(item => {
       // Count statuses
       if (item.Status in statuses) {
-        statuses[item.Status as keyof typeof statuses]++;
+        statuses[item.Status]++;
       }
 
       if (item.Received_By) {
@@ -75,11 +65,11 @@ export const DistributionTable: React.FC<DistributionTableProps> = ({
     
     const results = data.filter(item => {
       const matchesSearch = !term || 
-        item.Full_Name.toLowerCase().includes(term) || 
-        item.HOF_ID.toString().toLowerCase().includes(term) ||
-        item.AccNo.toString().toLowerCase().includes(term) ||
-        item.SN.toString().toLowerCase().includes(term) ||
-        item.Status.toLowerCase().includes(term) ||
+        item.Full_Name?.toLowerCase().includes(term) || 
+        item.HOF_ID?.toString().toLowerCase().includes(term) ||
+        item.AccNo?.toString().toLowerCase().includes(term) ||
+        item.SN?.toString().toLowerCase().includes(term) ||
+        item.Status?.toLowerCase().includes(term) ||
         (item.Update_Date && item.Update_Date.toLowerCase().includes(term)) ||
         (item.Update_Day && item.Update_Day.toLowerCase().includes(term)) ||
         (item.Update_Time && item.Update_Time.toLowerCase().includes(term)) ||
@@ -97,10 +87,10 @@ export const DistributionTable: React.FC<DistributionTableProps> = ({
     // If there's a search term, prioritize results where Acc No or HOF ID matches
     if (term) {
       return [...results].sort((a, b) => {
-        const aAcc = a.AccNo.toString().toLowerCase();
-        const bAcc = b.AccNo.toString().toLowerCase();
-        const aHof = a.HOF_ID.toString().toLowerCase();
-        const bHof = b.HOF_ID.toString().toLowerCase();
+        const aAcc = a.AccNo?.toString().toLowerCase() || '';
+        const bAcc = b.AccNo?.toString().toLowerCase() || '';
+        const aHof = a.HOF_ID?.toString().toLowerCase() || '';
+        const bHof = b.HOF_ID?.toString().toLowerCase() || '';
 
         const aHasAccMatch = aAcc.includes(term);
         const bHasAccMatch = bAcc.includes(term);
@@ -146,7 +136,7 @@ export const DistributionTable: React.FC<DistributionTableProps> = ({
 
   // Expose a way for parent to trigger scroll/page change
   React.useEffect(() => {
-    const handleJump = (event: any) => {
+    const handleJump = (event) => {
       const { hofId } = event.detail;
       const targetIndex = filteredData.findIndex(item => String(item.HOF_ID) === String(hofId));
       if (targetIndex !== -1) {
@@ -169,7 +159,7 @@ export const DistributionTable: React.FC<DistributionTableProps> = ({
     return () => window.removeEventListener('jump-to-hof', handleJump);
   }, [filteredData]);
 
-  const getStatusColor = (status: DistributionStatus) => {
+  const getStatusColor = (status) => {
     switch (status) {
       case 'Given': return 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20';
       case 'Not Allowed': return 'bg-rose-500/10 text-rose-400 border-rose-500/20';
@@ -386,7 +376,7 @@ export const DistributionTable: React.FC<DistributionTableProps> = ({
                       <div className="relative group/select">
                         <select
                           value={item.Status}
-                          onChange={(e) => onStatusChange(item.HOF_ID, e.target.value as DistributionStatus)}
+                          onChange={(e) => onStatusChange(item.HOF_ID, e.target.value)}
                           className="bg-slate-950 border border-slate-800 rounded-lg py-1.5 pl-3 pr-8 text-xs text-slate-300 focus:outline-none focus:border-emerald-500/50 appearance-none cursor-pointer hover:bg-slate-900 transition-all w-32"
                         >
                           <option value="Pending">Pending</option>
