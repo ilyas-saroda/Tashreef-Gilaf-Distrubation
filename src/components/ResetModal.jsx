@@ -2,13 +2,7 @@ import React from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { RefreshCcw } from 'lucide-react';
 
-interface ResetModalProps {
-  isOpen: boolean;
-  onClose: () => void;
-  onConfirm: () => void;
-}
-
-export function ResetModal({ isOpen, onClose, onConfirm }: ResetModalProps) {
+export function ResetModal({ isOpen, onClose, onConfirm }) {
   return (
     <AnimatePresence>
       {isOpen && (

@@ -2,15 +2,6 @@ import React from 'react';
 import { FileSpreadsheet, RefreshCcw, Cloud, CloudOff, Loader2 } from 'lucide-react';
 import { isSupabaseConfigured } from '../lib/supabase';
 
-interface NavbarProps {
-  isSyncing: boolean;
-  supabaseStatus: 'disconnected' | 'connected' | 'error';
-  errorMessage: string | null;
-  onRefresh: () => void;
-  onResetClick: () => void;
-  showResetButton: boolean;
-}
-
 export function Navbar({
   isSyncing,
   supabaseStatus,
@@ -18,7 +9,7 @@ export function Navbar({
   onRefresh,
   onResetClick,
   showResetButton
-}: NavbarProps) {
+}) {
   return (
     <nav className="sticky top-0 z-50 bg-slate-950/80 backdrop-blur-xl border-b border-slate-800">
       <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">

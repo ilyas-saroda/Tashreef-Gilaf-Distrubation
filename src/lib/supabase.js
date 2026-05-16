@@ -1,4 +1,3 @@
-/// <reference types="vite/client" />
 import { createClient } from '@supabase/supabase-js';
 
 const supabaseUrl = 'https://yownztngxtaaywutgtat.supabase.co';

@@ -1,16 +1,7 @@
 import React from 'react';
 import { motion } from 'motion/react';
 import { Trash2, X, User } from 'lucide-react';
-import { RumalEntry } from '../types';
 import { cn } from '../lib/utils';
-
-interface RecentUpdatesProps {
-  recentUpdates: RumalEntry[];
-  lastRefreshed: Date;
-  onClearAllRecent: () => void;
-  onDismissRecent: (hofId: string | number) => void;
-  onCardClick: (hofId: string | number) => void;
-}
 
 export function RecentUpdates({
   recentUpdates,
@@ -18,7 +9,7 @@ export function RecentUpdates({
   onClearAllRecent,
   onDismissRecent,
   onCardClick,
-}: RecentUpdatesProps) {
+}) {
   if (recentUpdates.length === 0) return null;
 
   return (

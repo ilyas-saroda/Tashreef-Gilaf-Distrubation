@@ -2,21 +2,7 @@ import React from 'react';
 import { motion } from 'motion/react';
 import { RefreshCcw } from 'lucide-react';
 
-interface ImportStats {
-  total: number;
-  unique: number;
-  duplicates: number;
-  skipped: number;
-  duplicateEntries: { id: string | number; name: string }[];
-  skippedEntries: { name: string; sn: string | number }[];
-}
-
-interface DataIntegrityReportProps {
-  importStats: ImportStats | null;
-  onClose: () => void;
-}
-
-export function DataIntegrityReport({ importStats, onClose }: DataIntegrityReportProps) {
+export function DataIntegrityReport({ importStats, onClose }) {
   if (!importStats || (importStats.duplicates === 0 && importStats.skipped === 0)) {
     return null;
   }
