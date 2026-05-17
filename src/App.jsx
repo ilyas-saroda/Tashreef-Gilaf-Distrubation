@@ -8,6 +8,7 @@ import { RecentUpdates } from "./components/RecentUpdates";
 import { Navbar } from "./components/Navbar";
 import { Footer } from "./components/Footer";
 import { TitleHeader } from "./components/TitleHeader";
+import { DynamicExcelViewer } from "./components/DynamicExcelViewer"; // New Component
 import {
   LayoutDashboard,
   FileSpreadsheet,
@@ -26,26 +27,6 @@ import * as XLSX from "xlsx";
 import { supabase, isSupabaseConfigured } from "./lib/supabase";
 import { cn } from "./lib/utils";
 
-const saveToLocalExcelFile = (fullData) => {
-  fetch("http://localhost:5000/api/save-all", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify(fullData)
-  }).catch(err => console.error("Local save-all failed:", err));
-};
-
-const updateSingleItemLocalExcel = (hofId, updates) => {
-  fetch("http://localhost:5000/api/update-item", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify({ hofId, updates })
-  }).catch(err => console.error("Local update-item failed:", err));
-};
-
 export default function App() {
   const [data, setData] = React.useState([]);
   const [isLoaded, setIsLoaded] = React.useState(false);
@@ -53,6 +34,7 @@ export default function App() {
   const [isSyncing, setIsSyncing] = React.useState(false);
   const [supabaseStatus, setSupabaseStatus] = React.useState("disconnected");
   const [errorMessage, setErrorMessage] = React.useState(null);
+  const [view, setView] = React.useState("main"); // Fixed the ReferenceError!
   const [appTitle, setAppTitle] = React.useState(
     () =>
       localStorage.getItem("app_distribution_title") ||
@@ -62,6 +44,35 @@ export default function App() {
   const [dismissedRecentIds, setDismissedRecentIds] = React.useState(new Set());
   const [dbKeys, setDbKeys] = React.useState([]);
   const [importStats, setImportStats] = React.useState(null);
+
+  // Helper helper to push to local Excel companion server
+  const saveToLocalExcelFile = async (fullData) => {
+    try {
+      await fetch("http://localhost:5000/api/save-all", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ data: fullData }),
+      });
+    } catch (e) {
+      console.warn(
+        "Local Backup Server is not running. Excel file not updated directly.",
+      );
+    }
+  };
+
+  const updateSingleItemLocalExcel = async (hofId, updates) => {
+    try {
+      await fetch("http://localhost:5000/api/update-item", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ hofId, updates }),
+      });
+    } catch (e) {
+      console.warn(
+        "Local Backup Server is offline. Single row excel bypass triggered.",
+      );
+    }
+  };
 
   // Helper to normalize Supabase data to App types (handles case sensitivity)
   const normalizeData = (items) => {
@@ -73,8 +84,6 @@ export default function App() {
       const s = String(rawStatus).trim().toLowerCase();
       if (s.includes("given")) {
         normalizedStatus = "Given";
-        // Try to extract name after "given to" or "given "
-        // Regular expression handles various formats: "Given to Name", "Given: Name", "Given - Name", etc.
         const match = String(rawStatus).match(
           /(?:given|distribution)\s*(?::|-|to)?\s*(.+)/i,
         );
@@ -121,7 +130,6 @@ export default function App() {
   };
 
   const scrollToHofId = (hofId) => {
-    // Dispatch a custom event that the table component can listen to
     window.dispatchEvent(
       new CustomEvent("jump-to-hof", {
         detail: { hofId },
@@ -132,8 +140,6 @@ export default function App() {
   // Helper to map App updates to Supabase columns using detected schema
   const prepareUpdatesWithSchema = (updates, currentEntry) => {
     const mapped = {};
-
-    // Process Status and Received_By (Given_To in user schema)
     const status = updates.Status ?? currentEntry?.Status ?? "Pending";
     const receiver = (
       updates.Received_By ??
@@ -143,13 +149,11 @@ export default function App() {
     const statusString =
       status === "Given" && receiver ? `Given to ${receiver}` : status;
 
-    // Use user's exact schema keys if detected, else best guess
     const getBestKey = (standardKey, alternates) => {
       if (dbKeys.includes(standardKey)) return standardKey;
       for (const alt of alternates) {
         if (dbKeys.includes(alt)) return alt;
       }
-      // Case insensitive fallback
       const found = dbKeys.find(
         (k) => k.toLowerCase() === standardKey.toLowerCase(),
       );
@@ -179,43 +183,6 @@ export default function App() {
     return mapped;
   };
 
-  // Helper to map App updates to Supabase columns
-  const prepareUpdates = (updates, currentEntry, caseType = "Pascal") => {
-    const mapped = {};
-
-    // Process Status and Received_By
-    const status = updates.Status ?? currentEntry?.Status ?? "Pending";
-    const receiver = (
-      updates.Received_By ??
-      currentEntry?.Received_By ??
-      ""
-    ).trim();
-    const statusString =
-      status === "Given" && receiver ? `Given to ${receiver}` : status;
-
-    const setKey = (key, value) => {
-      if (caseType === "lower") mapped[key.toLowerCase()] = value;
-      else if (caseType === "upper") mapped[key.toUpperCase()] = value;
-      else mapped[key] = value;
-    };
-
-    if (updates.Status !== undefined || updates.Received_By !== undefined) {
-      setKey("Status", statusString);
-      if (updates.Received_By !== undefined) {
-        setKey("Received_By", receiver);
-      }
-    }
-
-    if (updates.Update_Date !== undefined)
-      setKey("Update_Date", updates.Update_Date);
-    if (updates.Update_Day !== undefined)
-      setKey("Update_Day", updates.Update_Day);
-    if (updates.Update_Time !== undefined)
-      setKey("Update_Time", updates.Update_Time);
-
-    return mapped;
-  };
-
   // Load from Supabase or localStorage on mount
   React.useEffect(() => {
     const initData = async () => {
@@ -240,7 +207,6 @@ export default function App() {
         return;
       }
 
-      // 1. Try Supabase
       console.log("Fetching initial data from members table...");
       const { data: supabaseData, error } = await supabase
         .from("members")
@@ -254,33 +220,16 @@ export default function App() {
             ? 'Table "members" not found.'
             : error.message;
         setErrorMessage(detail);
-        const localData = getLocalData();
-        setData(localData);
-        saveToLocalExcelFile(localData);
-
-        // Show a more helpful message for common Supabase issues
-        if (
-          error.message.includes("FetchError") ||
-          error.message.includes("Failed to fetch")
-        ) {
-          console.warn("Network issue or Supabase URL is incorrect.");
-        } else if (error.code === "42P01") {
-          console.error('Table "members" does not exist in your database.');
-        }
+        const local = getLocalData();
+        setData(local);
+        saveToLocalExcelFile(local);
       } else if (supabaseData && supabaseData.length > 0) {
         setSupabaseStatus("connected");
         setErrorMessage(null);
-        // Detect keys from first record
         const first = supabaseData[0];
         setDbKeys(Object.keys(first));
-        console.log("Detected DB columns:", Object.keys(first));
 
         const normalized = normalizeData(supabaseData);
-        console.log(
-          "Successfully loaded and normalized data:",
-          normalized.length,
-          "records",
-        );
         setData(normalized);
         localStorage.setItem(
           "rumal_distribution_data",
@@ -288,10 +237,6 @@ export default function App() {
         );
         saveToLocalExcelFile(normalized);
       } else {
-        // Connected but cloud is empty - use local
-        console.log(
-          'Supabase connected but "members" table is empty or data is missing.',
-        );
         setSupabaseStatus("connected");
         setErrorMessage(null);
         const local = getLocalData();
@@ -309,7 +254,6 @@ export default function App() {
 
     setIsSyncing(true);
     try {
-      // Filter out entries without a valid HOF_ID and deduplicate
       const validEntries = entries.filter(
         (e) =>
           e.HOF_ID !== null &&
@@ -323,19 +267,13 @@ export default function App() {
       );
       const uniqueEntries = Array.from(uniqueEntriesMap.values());
 
-      if (uniqueEntries.length === 0) {
-        console.warn("No valid entries to sync (missing HOF_ID)");
-        return;
-      }
+      if (uniqueEntries.length === 0) return;
 
-      // Prepare entries for Cloud Sync
       const entriesToPush = uniqueEntries.map((e) => {
         const statusString =
           e.Status === "Given" && e.Received_By
             ? `Given to ${e.Received_By}`
             : e.Status;
-
-        // Exact mapping to user's schema columns
         const payload = {
           Status: statusString,
           Given_To: e.Received_By,
@@ -344,77 +282,29 @@ export default function App() {
           AccNo: e.AccNo,
           SN: e.SN,
         };
-
-        // Add id if we have one or generate from HOF_ID (since it's text PK)
         payload.id = e.id || String(e.HOF_ID);
-
-        // Include timestamp fields if they exist
         if (e.Update_Date) payload.Update_Date = e.Update_Date;
         if (e.Update_Day) payload.Update_Day = e.Update_Day;
         if (e.Update_Time) payload.Update_Time = e.Update_Time;
-
         return payload;
       });
 
       const { error } = await supabase
         .from("members")
         .upsert(entriesToPush, { onConflict: "id" });
-
-      if (error) {
-        // Retry with lowercase mapping if first attempt fails
-        if (
-          error.message.includes("column") ||
-          error.message.includes("not found")
-        ) {
-          const lowercaseEntries = uniqueEntries.map((e) => {
-            const statusString =
-              e.Status === "Given" && e.Received_By
-                ? `Given to ${e.Received_By}`
-                : e.Status;
-            return {
-              sn: e.SN,
-              accno: e.AccNo,
-              full_name: e.Full_Name,
-              hof_id: e.HOF_ID,
-              status: statusString,
-              given_to: e.Received_By,
-              id: e.id || String(e.HOF_ID),
-            };
-          });
-
-          const { error: retryError } = await supabase
-            .from("members")
-            .upsert(lowercaseEntries, { onConflict: "id" });
-
-          if (retryError) throw retryError;
-        } else {
-          throw error;
-        }
-      }
+      if (error) throw error;
       setSupabaseStatus("connected");
       setErrorMessage(null);
     } catch (error) {
       console.error("Sync Error Details:", error);
       setSupabaseStatus("error");
       setErrorMessage(error.message || "Sync failed");
-
-      let message = "Sync failed.";
-      if (error?.message?.includes("404")) {
-        message += ' Table "members" not found. Please create it in Supabase.';
-      } else if (error?.message?.includes("violates unique constraint")) {
-        message += " HOF_ID conflict. Ensure HOF_ID is unique.";
-      } else {
-        message += ` ${error?.message || ""}. Check console for details.`;
-      }
-
-      alert(message);
     } finally {
       setIsSyncing(false);
     }
   };
 
   const handleUpload = async (newData) => {
-    // Collect specific issues
     const emptyEntries = newData.filter(
       (e) =>
         e.HOF_ID === null ||
@@ -428,7 +318,6 @@ export default function App() {
         String(e.HOF_ID).trim() !== "",
     );
 
-    // Find duplicates and their names
     const duplicateEntries = [];
     const seenIds = new Set();
     const duplicatesAdded = new Set();
@@ -467,24 +356,23 @@ export default function App() {
       "rumal_distribution_data",
       JSON.stringify(uniqueEntries),
     );
-    saveToLocalExcelFile(uniqueEntries);
+
+    await saveToLocalExcelFile(uniqueEntries);
     await syncToCloud(uniqueEntries);
   };
 
   const updateItemRemote = async (hofId, updates) => {
-    updateSingleItemLocalExcel(hofId, updates);
+    await updateSingleItemLocalExcel(hofId, updates);
+
     if (isSupabaseConfigured && supabaseStatus === "connected") {
       const currentEntry = data.find(
         (item) => String(item.HOF_ID) === String(hofId),
       );
-
       try {
         const mappedUpdates = prepareUpdatesWithSchema(updates, currentEntry);
         const recordId = currentEntry?.id;
-
         let updateError;
 
-        // Strategy: Use 'id' if we have it (it's the primary key)
         if (recordId) {
           const { error } = await supabase
             .from("members")
@@ -492,28 +380,13 @@ export default function App() {
             .eq("id", recordId);
           updateError = error;
         } else {
-          // Fallback to HOF_ID (Pascal)
           const { error: err1 } = await supabase
             .from("members")
             .update(mappedUpdates)
             .eq("HOF_ID", String(hofId));
           updateError = err1;
-
-          // If no rows affected or error, try hof_id (lower)
-          if (updateError) {
-            const { error: err2 } = await supabase
-              .from("members")
-              .update(mappedUpdates)
-              .eq("hof_id", String(hofId));
-            updateError = err2;
-          }
         }
-
-        if (updateError) {
-          console.error("Remote update failed:", updateError);
-        } else {
-          console.log("Remote update successful for:", hofId);
-        }
+        if (updateError) console.error("Remote update failed:", updateError);
       } catch (err) {
         console.error("Remote update fatal error:", err);
       }
@@ -535,21 +408,15 @@ export default function App() {
 
   const handleStatusChange = async (hofId, newStatus) => {
     const timestamps = getTimestampFields();
-    setData((prev) =>
-      prev.map((item) =>
+    setData((prev) => {
+      const updated = prev.map((item) =>
         String(item.HOF_ID) === String(hofId)
           ? { ...item, Status: newStatus, ...timestamps }
           : item,
-      ),
-    );
-
-    // Remove from dismissed list so it shows up as a fresh update
-    setDismissedRecentIds((prev) => {
-      const next = new Set(prev);
-      next.delete(hofId);
-      return next;
+      );
+      localStorage.setItem("rumal_distribution_data", JSON.stringify(updated));
+      return updated;
     });
-
     await updateItemRemote(hofId, { Status: newStatus, ...timestamps });
   };
 
@@ -557,8 +424,8 @@ export default function App() {
     let updatedStatus;
     const timestamps = getTimestampFields();
 
-    setData((prev) =>
-      prev.map((item) => {
+    setData((prev) => {
+      const updated = prev.map((item) => {
         if (String(item.HOF_ID) === String(hofId)) {
           const shouldUpdateStatus =
             newName.trim() !== "" && item.Status === "Pending";
@@ -572,16 +439,10 @@ export default function App() {
           };
         }
         return item;
-      }),
-    );
-
-    // Remove from dismissed list so it shows up as a fresh update
-    setDismissedRecentIds((prev) => {
-      const next = new Set(prev);
-      next.delete(hofId);
-      return next;
+      });
+      localStorage.setItem("rumal_distribution_data", JSON.stringify(updated));
+      return updated;
     });
-
     await updateItemRemote(hofId, {
       Received_By: newName,
       ...(updatedStatus ? { Status: updatedStatus } : {}),
@@ -593,27 +454,16 @@ export default function App() {
     const ws = XLSX.utils.json_to_sheet(dataToExport);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "DistributionStatus");
-
-    const suffix = dataToExport.length < data.length ? "_Filtered" : "";
     XLSX.writeFile(
       wb,
-      `Distribution_Update${suffix}_${new Date().toISOString().split("T")[0]}.xlsx`,
+      `Distribution_Update_${new Date().toISOString().split("T")[0]}.xlsx`,
     );
   };
 
   const handleReset = async () => {
     setData([]);
     localStorage.removeItem("rumal_distribution_data");
-    saveToLocalExcelFile([]);
-
-    if (isSupabaseConfigured && supabaseStatus === "connected") {
-      const { error } = await supabase
-        .from("members")
-        .delete()
-        .neq("HOF_ID", "0"); // Delete everything
-      if (error) console.error("Error clearing Supabase:", error);
-    }
-
+    await saveToLocalExcelFile([]);
     setShowResetModal(false);
   };
 
@@ -628,11 +478,6 @@ export default function App() {
     [data],
   );
 
-  const handleTitleChange = (newTitle) => {
-    setAppTitle(newTitle);
-    localStorage.setItem("app_distribution_title", newTitle);
-  };
-
   const handleRefresh = async () => {
     if (!isSupabaseConfigured) return;
     setIsSyncing(true);
@@ -640,7 +485,6 @@ export default function App() {
       const { data: supabaseData, error } = await supabase
         .from("members")
         .select("*");
-
       if (error) throw error;
       if (supabaseData) {
         const normalized = normalizeData(supabaseData);
@@ -649,51 +493,14 @@ export default function App() {
           "rumal_distribution_data",
           JSON.stringify(normalized),
         );
+        saveToLocalExcelFile(normalized);
         setLastRefreshed(new Date());
       }
     } catch (e) {
-      console.error("Refresh failed", e);
       alert("Failed to refresh: " + e.message);
     } finally {
       setIsSyncing(false);
     }
-  };
-
-  const handleClearItemUpdateInfo = async (hofId) => {
-    const updated = data.map((item) =>
-      String(item.HOF_ID) === String(hofId)
-        ? {
-            ...item,
-            Update_Date: undefined,
-            Update_Day: undefined,
-            Update_Time: undefined,
-          }
-        : item,
-    );
-    setData(updated);
-    localStorage.setItem("rumal_distribution_data", JSON.stringify(updated));
-    await updateItemRemote(hofId, {
-      Update_Date: null,
-      Update_Day: null,
-      Update_Time: null,
-    });
-  };
-
-  const handleDismissRecent = (hofId) => {
-    setDismissedRecentIds((prev) => {
-      const next = new Set(prev);
-      next.add(hofId);
-      return next;
-    });
-  };
-
-  const handleDismissAllRecent = () => {
-    const currentIds = recentUpdates.map((item) => item.HOF_ID);
-    setDismissedRecentIds((prev) => {
-      const next = new Set(prev);
-      currentIds.forEach((id) => next.add(id));
-      return next;
-    });
   };
 
   const recentUpdates = React.useMemo(() => {
@@ -701,27 +508,49 @@ export default function App() {
       .filter(
         (item) => item.Update_Date && !dismissedRecentIds.has(item.HOF_ID),
       )
-      .sort((a, b) => {
-        const timeA = `${a.Update_Date} ${a.Update_Time}`;
-        const timeB = `${b.Update_Date} ${b.Update_Time}`;
-        return timeB.localeCompare(timeA);
-      })
+      .sort((a, b) =>
+        `${b.Update_Date} ${b.Update_Time}`.localeCompare(
+          `${a.Update_Date} ${a.Update_Time}`,
+        ),
+      )
       .slice(0, 5);
   }, [data, dismissedRecentIds]);
 
   return (
-    <div className="min-h-screen bg-slate-950 font-sans selection:bg-emerald-500/30 selection:text-emerald-200 text-slate-200">
-      {/* Custom Confirmation Modal */}
+    <div className="min-h-screen bg-slate-950 font-sans text-slate-200">
       <ResetModal
         isOpen={showResetModal}
         onClose={() => setShowResetModal(false)}
         onConfirm={handleReset}
       />
 
-      {/* Decorative background elements */}
-      <div className="fixed inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute -top-[10%] -left-[10%] w-[40%] h-[40%] bg-emerald-600/5 blur-[120px] rounded-full" />
-        <div className="absolute -bottom-[10%] -right-[10%] w-[40%] h-[40%] bg-blue-600/5 blur-[120px] rounded-full" />
+      {/* Modern Compact View Toggle Bar at the very top */}
+      <div className="bg-slate-900 border-b border-slate-800 px-4 py-2 flex justify-between items-center text-xs">
+        <span className="text-slate-400 font-medium">System View Mode:</span>
+        <div className="flex gap-2">
+          <button
+            onClick={() => setView("main")}
+            className={cn(
+              "px-3 py-1 rounded transition-all font-semibold",
+              view === "main"
+                ? "bg-emerald-500 text-slate-950 shadow"
+                : "bg-slate-800 text-slate-300 hover:bg-slate-700",
+            )}
+          >
+            Tashrif Main Distribution (Online/Offline Sync)
+          </button>
+          <button
+            onClick={() => setView("dynamic")}
+            className={cn(
+              "px-3 py-1 rounded transition-all font-semibold",
+              view === "dynamic"
+                ? "bg-blue-500 text-white shadow"
+                : "bg-slate-800 text-slate-300 hover:bg-slate-700",
+            )}
+          >
+            Dynamic Excel Sheet Viewer (100% Offline No-Schema)
+          </button>
+        </div>
       </div>
 
       <Navbar
@@ -730,57 +559,92 @@ export default function App() {
         errorMessage={errorMessage}
         onRefresh={handleRefresh}
         onResetClick={() => setShowResetModal(true)}
-        showResetButton={data.length > 0}
+        showResetButton={data.length > 0 && view === "main"}
       />
 
       <main className="max-w-7xl mx-auto px-4 py-8 relative">
-        <TitleHeader appTitle={appTitle} onChangeTitle={handleTitleChange} />
-
         <AnimatePresence mode="wait">
-          {data.length === 0 ? (
+          {view === "dynamic" ? (
             <motion.div
-              key="upload"
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 1.05 }}
-              className="max-w-2xl mx-auto py-12"
+              key="dynamic-view"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
             >
-              <ExcelUpload onUpload={handleUpload} />
+              {/* Dynamic Component Render safely */}
+              <DynamicExcelViewer />
             </motion.div>
           ) : (
             <motion.div
-              key="data"
+              key="main-view"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
             >
-              <AnalyticsHeader analytics={analytics} />
-
-              <RecentUpdates
-                recentUpdates={recentUpdates}
-                lastRefreshed={lastRefreshed}
-                onClearAllRecent={handleDismissAllRecent}
-                onDismissRecent={handleDismissRecent}
-                onCardClick={scrollToHofId}
+              <TitleHeader
+                appTitle={appTitle}
+                onChangeTitle={(t) => {
+                  setAppTitle(t);
+                  localStorage.setItem("app_distribution_title", t);
+                }}
               />
 
-              <DataIntegrityReport
-                importStats={importStats}
-                onClose={() => setImportStats(null)}
-              />
-
-              <DistributionTable
-                data={data}
-                onStatusChange={handleStatusChange}
-                onReceivedByChange={handleReceivedByChange}
-                onClearUpdateInfo={handleClearItemUpdateInfo}
-                onExport={handleExport}
-                onImportNew={() => setShowResetModal(true)}
-              />
+              {data.length === 0 ? (
+                <div className="max-w-2xl mx-auto py-12">
+                  <ExcelUpload onUpload={handleUpload} />
+                </div>
+              ) : (
+                <>
+                  <AnalyticsHeader analytics={analytics} />
+                  <RecentUpdates
+                    recentUpdates={recentUpdates}
+                    lastRefreshed={lastRefreshed}
+                    onClearAllRecent={() =>
+                      setDismissedRecentIds(new Set(data.map((i) => i.HOF_ID)))
+                    }
+                    onDismissRecent={(id) =>
+                      setDismissedRecentIds((prev) => new Set([...prev, id]))
+                    }
+                    onCardClick={scrollToHofId}
+                  />
+                  <DataIntegrityReport
+                    importStats={importStats}
+                    onClose={() => setImportStats(null)}
+                  />
+                  <DistributionTable
+                    data={data}
+                    onStatusChange={handleStatusChange}
+                    onReceivedByChange={handleReceivedByChange}
+                    onClearUpdateInfo={async (id) => {
+                      const updated = data.map((item) =>
+                        String(item.HOF_ID) === String(id)
+                          ? {
+                              ...item,
+                              Update_Date: undefined,
+                              Update_Day: undefined,
+                              Update_Time: undefined,
+                            }
+                          : item,
+                      );
+                      setData(updated);
+                      localStorage.setItem(
+                        "rumal_distribution_data",
+                        JSON.stringify(updated),
+                      );
+                      await updateItemRemote(id, {
+                        Update_Date: null,
+                        Update_Day: null,
+                        Update_Time: null,
+                      });
+                    }}
+                    onExport={handleExport}
+                    onImportNew={() => setShowResetModal(true)}
+                  />
+                </>
+              )}
             </motion.div>
           )}
         </AnimatePresence>
       </main>
-
       <Footer />
     </div>
   );

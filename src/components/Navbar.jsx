@@ -8,7 +8,9 @@ export function Navbar({
   errorMessage,
   onRefresh,
   onResetClick,
-  showResetButton
+  showResetButton,
+  onViewToggle,
+  currentView
 }) {
   return (
     <nav className="sticky top-0 z-50 bg-slate-950/80 backdrop-blur-xl border-b border-slate-800">
@@ -61,6 +63,12 @@ export function Navbar({
         </div>
         
         <div className="flex items-center gap-4">
+          <button 
+            onClick={onViewToggle}
+            className="px-3 py-1.5 text-xs font-bold text-emerald-100 hover:text-emerald-400 hover:bg-emerald-400/10 rounded border border-emerald-500/30 transition-all mr-2 shadow-sm"
+          >
+            {currentView === 'dynamic' ? 'Back to Distribution' : 'Open Dynamic Offline Viewer'}
+          </button>
           {showResetButton && (
             <button 
               onClick={onResetClick}
@@ -71,7 +79,7 @@ export function Navbar({
             </button>
           )}
           <div className="h-4 w-[1px] bg-slate-800" />
-          <div className="text-right">
+          <div className="text-right hidden sm:block">
             <p className="text-xs font-semibold text-slate-400">Organization Unit</p>
             <p className="text-sm font-bold text-white leading-none">MNC Distribution Dept.</p>
           </div>
