@@ -26,6 +26,26 @@ import * as XLSX from "xlsx";
 import { supabase, isSupabaseConfigured } from "./lib/supabase";
 import { cn } from "./lib/utils";
 
+const saveToLocalExcelFile = (fullData) => {
+  fetch("http://localhost:5000/api/save-all", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify(fullData)
+  }).catch(err => console.error("Local save-all failed:", err));
+};
+
+const updateSingleItemLocalExcel = (hofId, updates) => {
+  fetch("http://localhost:5000/api/update-item", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({ hofId, updates })
+  }).catch(err => console.error("Local update-item failed:", err));
+};
+
 export default function App() {
   const [data, setData] = React.useState([]);
   const [isLoaded, setIsLoaded] = React.useState(false);
@@ -213,7 +233,9 @@ export default function App() {
 
       if (!isSupabaseConfigured) {
         setSupabaseStatus("disconnected");
-        setData(getLocalData());
+        const localData = getLocalData();
+        setData(localData);
+        saveToLocalExcelFile(localData);
         setIsLoaded(true);
         return;
       }
@@ -232,7 +254,9 @@ export default function App() {
             ? 'Table "members" not found.'
             : error.message;
         setErrorMessage(detail);
-        setData(getLocalData());
+        const localData = getLocalData();
+        setData(localData);
+        saveToLocalExcelFile(localData);
 
         // Show a more helpful message for common Supabase issues
         if (
@@ -262,6 +286,7 @@ export default function App() {
           "rumal_distribution_data",
           JSON.stringify(normalized),
         );
+        saveToLocalExcelFile(normalized);
       } else {
         // Connected but cloud is empty - use local
         console.log(
@@ -271,6 +296,7 @@ export default function App() {
         setErrorMessage(null);
         const local = getLocalData();
         setData(local);
+        saveToLocalExcelFile(local);
       }
       setIsLoaded(true);
     };
@@ -441,10 +467,12 @@ export default function App() {
       "rumal_distribution_data",
       JSON.stringify(uniqueEntries),
     );
+    saveToLocalExcelFile(uniqueEntries);
     await syncToCloud(uniqueEntries);
   };
 
   const updateItemRemote = async (hofId, updates) => {
+    updateSingleItemLocalExcel(hofId, updates);
     if (isSupabaseConfigured && supabaseStatus === "connected") {
       const currentEntry = data.find(
         (item) => String(item.HOF_ID) === String(hofId),
@@ -576,6 +604,7 @@ export default function App() {
   const handleReset = async () => {
     setData([]);
     localStorage.removeItem("rumal_distribution_data");
+    saveToLocalExcelFile([]);
 
     if (isSupabaseConfigured && supabaseStatus === "connected") {
       const { error } = await supabase
