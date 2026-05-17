@@ -128,15 +128,20 @@ app.post("/api/save-dynamic", (req, res) => {
 app.get("/api/load-dynamic", (req, res) => {
   try {
     if (!fs.existsSync(dynamicPath)) {
-      return res.json({ success: true, data: [] });
+      return res.json([]);
     }
+    
     const wb = XLSX.readFile(dynamicPath);
+    if (!wb || !wb.SheetNames || wb.SheetNames.length === 0) {
+      return res.json([]);
+    }
+    
     const sheetName = wb.SheetNames[0];
     const rawData = XLSX.utils.sheet_to_json(wb.Sheets[sheetName]);
-    return res.json({ success: true, data: rawData });
+    return res.json(rawData);
   } catch (error) {
     console.error("[Dynamic Load Error]:", error);
-    return res.status(500).json({ success: false, error: error.message });
+    return res.json([]);
   }
 });
 

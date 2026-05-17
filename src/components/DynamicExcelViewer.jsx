@@ -29,9 +29,9 @@ export function DynamicExcelViewer() {
       setLoading(true);
       const res = await fetch("http://localhost:5000/api/load-dynamic");
       const result = await res.json();
-      if (result.success && result.data && result.data.length > 0) {
-        setData(result.data);
-        setHeaders(Object.keys(result.data[0]));
+      if (Array.isArray(result) && result.length > 0) {
+        setData(result);
+        setHeaders(Object.keys(result[0]));
       }
     } catch (e) {
       console.error("Failed to load dynamic backup file:", e);
