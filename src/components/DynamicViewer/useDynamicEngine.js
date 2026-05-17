@@ -75,9 +75,14 @@ export function useDynamicEngine() {
       setLoading(true);
       const res = await fetch("http://localhost:5000/api/load-dynamic");
       const result = await res.json();
+      
       if (Array.isArray(result) && result.length > 0) {
         setData(result);
+        // CRITICAL FIX: Extract and set headers from the loaded data objects instantly!
         setHeaders(Object.keys(result[0]));
+      } else {
+        setData([]);
+        setHeaders([]);
       }
     } catch (e) {
       console.error("Failed to load dynamic backup file:", e);
