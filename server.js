@@ -99,6 +99,9 @@ app.post("/api/update-item", (req, res) => {
   }
 });
 
+// Global Runtime RAM Cache for Dynamic Excel Viewer
+let dynamicSheetCache = null;
+
 // 3. Dynamic Sheets: Save Whole Sheet (100% Offline)
 app.post("/api/save-dynamic", (req, res) => {
   try {
@@ -109,15 +112,26 @@ app.post("/api/save-dynamic", (req, res) => {
         .json({ success: false, error: "Data must be an array" });
     }
 
-    const ws = XLSX.utils.json_to_sheet(incomingData);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "DynamicSheet");
-    XLSX.writeFile(wb, dynamicPath);
+    // 1. Immediately update RAM Cache
+    dynamicSheetCache = incomingData;
 
-    console.log(
-      `[Dynamic Backup] Sheet written with ${incomingData.length} rows.`,
-    );
-    return res.json({ success: true });
+    // 2. Return API response instantly to prevent UI blocking
+    res.json({ success: true, message: 'Dynamic backup saved successfully' });
+
+    // 3. Asynchronously write to physical file in the background
+    setTimeout(() => {
+      try {
+        const ws = XLSX.utils.json_to_sheet(incomingData);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "DynamicSheet");
+        XLSX.writeFile(wb, dynamicPath);
+        console.log(
+          `[Dynamic Backup] Background sheet written with ${incomingData.length} rows.`,
+        );
+      } catch (writeError) {
+        console.error("[Background Save Error]:", writeError);
+      }
+    }, 0);
   } catch (error) {
     console.error("[Dynamic Save Error]:", error);
     return res.status(500).json({ success: false, error: error.message });
@@ -127,6 +141,12 @@ app.post("/api/save-dynamic", (req, res) => {
 // 4. Dynamic Sheets: GET Loader (Fixes the 404 & SyntaxError on Refresh!)
 app.get("/api/load-dynamic", (req, res) => {
   try {
+    // 1. Return from fast RAM cache if available
+    if (dynamicSheetCache !== null) {
+      return res.json(dynamicSheetCache);
+    }
+
+    // 2. Fallback to reading file system if RAM cache is empty
     if (!fs.existsSync(dynamicPath)) {
       return res.json([]);
     }
@@ -138,7 +158,10 @@ app.get("/api/load-dynamic", (req, res) => {
     
     const sheetName = wb.SheetNames[0];
     const rawData = XLSX.utils.sheet_to_json(wb.Sheets[sheetName]);
-    return res.json(rawData);
+    
+    // 3. Populate cache and return
+    dynamicSheetCache = rawData;
+    return res.json(dynamicSheetCache);
   } catch (error) {
     console.error("[Dynamic Load Error]:", error);
     return res.json([]);
