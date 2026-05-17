@@ -65,6 +65,11 @@ export function RecentUpdates({
               </div>
             </div>
             <p className="text-sm font-bold text-slate-200 truncate group-hover:text-emerald-400 transition-colors">{item.Full_Name}</p>
+            <div className="flex items-center gap-1.5 mt-1 text-[9px] font-mono text-slate-400/60 truncate">
+              {item.SN && <span>SN: {item.SN}</span>}
+              {item.SN && item.AccNo && <span>•</span>}
+              {item.AccNo && <span>Acc: {item.AccNo}</span>}
+            </div>
             <div className="flex items-center justify-between mt-2 text-[8px] text-slate-500 font-medium">
               <span>{item.Update_Day?.substring(0,3)} • {item.Update_Time}</span>
               {item.Received_By && <span className="text-emerald-500/60 flex items-center gap-1"><User className="w-2 h-2" /> {item.Received_By}</span>}

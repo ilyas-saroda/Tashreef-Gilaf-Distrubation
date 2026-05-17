@@ -1,6 +1,6 @@
-import React from 'react';
-import { Edit3, Check, X } from 'lucide-react';
-import { motion } from 'motion/react';
+import React from "react";
+import { Edit3, Check, X } from "lucide-react";
+import { motion } from "motion/react";
 
 export function TitleHeader({ appTitle, onChangeTitle }) {
   const [isEditingTitle, setIsEditingTitle] = React.useState(false);
@@ -25,7 +25,7 @@ export function TitleHeader({ appTitle, onChangeTitle }) {
     <header className="mb-12 group">
       <div className="flex items-center gap-4 mb-2 min-h-[48px]">
         {isEditingTitle ? (
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
             className="flex items-center gap-2 w-full max-w-2xl"
@@ -35,19 +35,19 @@ export function TitleHeader({ appTitle, onChangeTitle }) {
               value={tempTitle}
               onChange={(e) => setTempTitle(e.target.value)}
               onKeyDown={(e) => {
-                if (e.key === 'Enter') handleSaveTitle();
-                if (e.key === 'Escape') handleCancelTitle();
+                if (e.key === "Enter") handleSaveTitle();
+                if (e.key === "Escape") handleCancelTitle();
               }}
               autoFocus
               className="bg-slate-900 border-2 border-emerald-500/50 rounded-xl px-4 py-2 text-3xl font-extrabold text-white w-full outline-none focus:border-emerald-500 transition-all shadow-lg shadow-emerald-950/20"
             />
-            <button 
+            <button
               onClick={handleSaveTitle}
               className="p-3 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl shadow-lg transition-all"
             >
               <Check className="w-5 h-5" />
             </button>
-            <button 
+            <button
               onClick={handleCancelTitle}
               className="p-3 bg-slate-800 hover:bg-slate-700 text-slate-400 rounded-xl transition-all"
             >
@@ -56,7 +56,7 @@ export function TitleHeader({ appTitle, onChangeTitle }) {
           </motion.div>
         ) : (
           <>
-            <motion.h2 
+            <motion.h2
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
               className="text-4xl font-extrabold text-white tracking-tight cursor-pointer hover:text-emerald-400 transition-colors"
@@ -67,7 +67,7 @@ export function TitleHeader({ appTitle, onChangeTitle }) {
             >
               {appTitle}
             </motion.h2>
-            <button 
+            <button
               onClick={() => {
                 setTempTitle(appTitle);
                 setIsEditingTitle(true);
@@ -79,7 +79,7 @@ export function TitleHeader({ appTitle, onChangeTitle }) {
           </>
         )}
       </div>
-      <motion.p 
+      {/* <motion.p 
         initial={{ opacity: 0, x: -20 }}
         animate={{ opacity: 1, x: 0 }}
         transition={{ delay: 0.1 }}
@@ -87,7 +87,7 @@ export function TitleHeader({ appTitle, onChangeTitle }) {
       >
         Management and tracking of material distribution across regional centers. 
         Real-time synchronization and analytical oversight.
-      </motion.p>
+      </motion.p> */}
     </header>
   );
 }
