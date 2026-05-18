@@ -65,6 +65,25 @@ export function DynamicExcelViewer() {
             totalAmount={engine.totalAmount}
           />
 
+          {/* Sheet Selector Tabs Bar */}
+          {engine.sheets && engine.sheets.length > 0 && (
+            <div className="flex overflow-x-auto hide-scrollbar gap-2 py-2">
+              {engine.sheets.map(sheet => (
+                <button
+                  key={sheet}
+                  onClick={() => engine.setActiveSheet(sheet)}
+                  className={`px-4 py-2 text-sm font-semibold rounded-lg whitespace-nowrap transition-colors ${
+                    engine.activeSheet === sheet
+                      ? "bg-blue-600 text-white shadow-md"
+                      : "bg-slate-800 text-slate-400 hover:bg-slate-700"
+                  }`}
+                >
+                  {sheet}
+                </button>
+              ))}
+            </div>
+          )}
+
           {/* User Interaction & Reset Filters Container */}
           <div className="bg-slate-900/50 p-4 border border-slate-800 rounded-xl flex flex-col md:flex-row gap-4 items-center justify-between">
             <div className="flex flex-col md:flex-row gap-4 items-center w-full md:w-auto">

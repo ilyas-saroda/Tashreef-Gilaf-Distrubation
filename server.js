@@ -106,10 +106,10 @@ let dynamicSheetCache = null;
 app.post("/api/save-dynamic", (req, res) => {
   try {
     let incomingData = req.body.data || req.body;
-    if (!Array.isArray(incomingData)) {
+    if (typeof incomingData !== 'object' || Array.isArray(incomingData) || incomingData === null) {
       return res
         .status(400)
-        .json({ success: false, error: "Data must be an array" });
+        .json({ success: false, error: "Data must be an object representing sheets" });
     }
 
     // 1. Immediately update RAM Cache
@@ -121,12 +121,16 @@ app.post("/api/save-dynamic", (req, res) => {
     // 3. Asynchronously write to physical file in the background
     setTimeout(() => {
       try {
-        const ws = XLSX.utils.json_to_sheet(incomingData);
         const wb = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(wb, ws, "DynamicSheet");
+        let totalRows = 0;
+        for (const [sheetName, sheetData] of Object.entries(incomingData)) {
+          const ws = XLSX.utils.json_to_sheet(sheetData);
+          XLSX.utils.book_append_sheet(wb, ws, sheetName);
+          totalRows += sheetData.length;
+        }
         XLSX.writeFile(wb, dynamicPath);
         console.log(
-          `[Dynamic Backup] Background sheet written with ${incomingData.length} rows.`,
+          `[Dynamic Backup] Background workbook written with ${totalRows} total rows across ${Object.keys(incomingData).length} sheets.`,
         );
       } catch (writeError) {
         console.error("[Background Save Error]:", writeError);
@@ -148,23 +152,25 @@ app.get("/api/load-dynamic", (req, res) => {
 
     // 2. Fallback to reading file system if RAM cache is empty
     if (!fs.existsSync(dynamicPath)) {
-      return res.json([]);
+      return res.json({});
     }
     
     const wb = XLSX.readFile(dynamicPath);
     if (!wb || !wb.SheetNames || wb.SheetNames.length === 0) {
-      return res.json([]);
+      return res.json({});
     }
     
-    const sheetName = wb.SheetNames[0];
-    const rawData = XLSX.utils.sheet_to_json(wb.Sheets[sheetName]);
+    const allSheetsData = {};
+    for (const sheetName of wb.SheetNames) {
+      allSheetsData[sheetName] = XLSX.utils.sheet_to_json(wb.Sheets[sheetName]);
+    }
     
     // 3. Populate cache and return
-    dynamicSheetCache = rawData;
+    dynamicSheetCache = allSheetsData;
     return res.json(dynamicSheetCache);
   } catch (error) {
     console.error("[Dynamic Load Error]:", error);
-    return res.json([]);
+    return res.json({});
   }
 });
 

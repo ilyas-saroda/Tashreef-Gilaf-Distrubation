@@ -35,13 +35,17 @@ export function convertNumberToWords(num) {
 }
 
 export function useDynamicEngine() {
-  const [data, setData] = useState([]);
-  const [headers, setHeaders] = useState([]);
+  const [allData, setAllData] = useState({});
+  const [sheets, setSheets] = useState([]);
+  const [activeSheet, setActiveSheet] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
   const [columnFilters, setColumnFilters] = useState({});
   const [editingCell, setEditingCell] = useState(null); // { originalIndex, header }
   const [editValue, setEditValue] = useState("");
   const [loading, setLoading] = useState(true);
+
+  const data = allData[activeSheet] || [];
+  const headers = data.length > 0 ? Object.keys(data[0]) : [];
 
   // ADVANCED CACHE LAYER: Memoized Cache Map for instant O(0) sub-second re-renders
   const filterCacheRef = useRef(new Map());
@@ -76,13 +80,21 @@ export function useDynamicEngine() {
       const res = await fetch("http://localhost:5000/api/load-dynamic");
       const result = await res.json();
       
-      if (Array.isArray(result) && result.length > 0) {
-        setData(result);
-        // CRITICAL FIX: Extract and set headers from the loaded data objects instantly!
-        setHeaders(Object.keys(result[0]));
+      if (typeof result === 'object' && result !== null && !Array.isArray(result) && Object.keys(result).length > 0) {
+        setAllData(result);
+        const sheetNames = Object.keys(result);
+        setSheets(sheetNames);
+        setActiveSheet(sheetNames[0]);
+      } else if (Array.isArray(result) && result.length > 0) {
+        // Fallback for legacy flat array cache
+        const legacyData = { Sheet1: result };
+        setAllData(legacyData);
+        setSheets(["Sheet1"]);
+        setActiveSheet("Sheet1");
       } else {
-        setData([]);
-        setHeaders([]);
+        setAllData({});
+        setSheets([]);
+        setActiveSheet("");
       }
     } catch (e) {
       console.error("Failed to load dynamic backup file:", e);
@@ -91,21 +103,24 @@ export function useDynamicEngine() {
     }
   };
 
-  const saveUpdate = async (updatedData) => {
+  const saveUpdate = async (updatedAllData) => {
     // INVALIDATE CACHE: Clear the cache map completely whenever data changes
     filterCacheRef.current.clear();
     
     // Clean data before sending to server (remove warehouse meta-properties)
-    const cleanData = updatedData.map(row => {
-      const { __originalIndex, __lowerRow, __fullText, ...cleanRow } = row;
-      return cleanRow;
-    });
+    const payload = {};
+    for (const sheetName in updatedAllData) {
+      payload[sheetName] = updatedAllData[sheetName].map(row => {
+        const { __originalIndex, __lowerRow, __fullText, ...cleanRow } = row;
+        return cleanRow;
+      });
+    }
 
     try {
       await fetch("http://localhost:5000/api/save-dynamic", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ data: cleanData }),
+        body: JSON.stringify({ data: payload }),
       });
     } catch (e) {
       console.warn("Could not save to dynamic server:", e);
@@ -120,19 +135,20 @@ export function useDynamicEngine() {
     reader.onload = async (evt) => {
       const bstr = evt.target.result;
       const wb = XLSX.read(bstr, { type: "binary" });
-      const wsname = wb.SheetNames[0];
-      const ws = wb.Sheets[wsname];
+      
+      const newAllData = {};
+      wb.SheetNames.forEach(name => {
+        newAllData[name] = XLSX.utils.sheet_to_json(wb.Sheets[name]);
+      });
 
-      const jsonData = XLSX.utils.sheet_to_json(ws);
-
-      if (jsonData.length > 0) {
+      if (Object.keys(newAllData).length > 0) {
         filterCacheRef.current.clear(); // Clear cache for new data
-        const detectedHeaders = Object.keys(jsonData[0]);
-        setData(jsonData);
-        setHeaders(detectedHeaders);
+        setAllData(newAllData);
+        setSheets(wb.SheetNames);
+        setActiveSheet(wb.SheetNames[0]);
         setColumnFilters({});
         setSearchTerm("");
-        await saveUpdate(jsonData);
+        await saveUpdate(newAllData);
       } else {
         alert("This Excel sheet seems to be empty.");
       }
@@ -147,14 +163,18 @@ export function useDynamicEngine() {
   };
 
   const handleCellEditSave = async (originalIndex, header) => {
-    const updated = [...data];
-    updated[originalIndex] = {
-      ...updated[originalIndex],
+    const activeSheetData = [...data];
+    activeSheetData[originalIndex] = {
+      ...activeSheetData[originalIndex],
       [header]: editValue,
     };
-    setData(updated);
+    const updatedAllData = {
+      ...allData,
+      [activeSheet]: activeSheetData,
+    };
+    setAllData(updatedAllData);
     setEditingCell(null);
-    await saveUpdate(updated);
+    await saveUpdate(updatedAllData);
   };
 
   const handleResetFilters = () => {
@@ -379,6 +399,9 @@ export function useDynamicEngine() {
   }, [warehouse.enhancedData, filteredData, amountHeader]);
 
   return {
+    sheets,
+    activeSheet,
+    setActiveSheet,
     data,
     headers,
     searchTerm,
