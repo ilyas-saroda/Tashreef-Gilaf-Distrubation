@@ -304,14 +304,14 @@ export const DistributionTable = ({
       <div className="overflow-x-auto">
         <table className="w-full text-left border-collapse">
           <thead>
-            <tr className="bg-slate-950/50 text-slate-400 text-xs font-semibold uppercase tracking-wider">
-              <th className="px-6 py-4">SN</th>
-              <th className="px-6 py-4">Acc No</th>
-              <th className="px-6 py-4">Full Name</th>
-              <th className="px-6 py-4">HOF ID</th>
-              <th className="px-6 py-4">Status</th>
-              <th className="px-6 py-4">Last Updated</th>
-              <th className="px-6 py-4">Action</th>
+            <tr className="bg-slate-950/50 text-slate-400 text-sm font-bold uppercase tracking-widest">
+              <th className="px-6 py-5">SN</th>
+              <th className="px-6 py-5">Acc No</th>
+              <th className="px-6 py-5">Full Name</th>
+              <th className="px-6 py-5">HOF ID</th>
+              <th className="px-6 py-5">Status</th>
+              <th className="px-6 py-5">Last Updated</th>
+              <th className="px-6 py-5">Action</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-800">
@@ -322,40 +322,40 @@ export const DistributionTable = ({
                   id={`hof-row-${item.HOF_ID}`}
                   className="group hover:bg-slate-800/30 transition-colors"
                 >
-                  <td className="px-6 py-4 text-sm text-slate-400">{item.SN}</td>
-                  <td className="px-6 py-4 text-sm font-mono text-slate-500">{item.AccNo}</td>
-                  <td className="px-6 py-4">
-                    <span className="text-sm font-bold text-slate-200 group-hover:text-emerald-400 transition-colors">
+                  <td className="px-6 py-5 text-base text-slate-400">{item.SN}</td>
+                  <td className="px-6 py-5 text-base font-mono text-slate-500 tracking-wide">{item.AccNo}</td>
+                  <td className="px-6 py-5">
+                    <span className="text-base font-bold text-slate-200 group-hover:text-emerald-400 transition-colors tracking-wide">
                       {item.Full_Name}
                     </span>
                   </td>
-                  <td className="px-6 py-4 text-sm font-mono text-slate-400 text-emerald-500/70">{item.HOF_ID}</td>
-                  <td className="px-6 py-4">
+                  <td className="px-6 py-5 text-base font-mono text-slate-400 text-emerald-500/70 tracking-wide">{item.HOF_ID}</td>
+                  <td className="px-6 py-5">
                     <div className="flex flex-col">
                       <span className={cn(
-                        "inline-flex items-center gap-1.5 text-[10px] font-bold py-1 px-2.5 rounded-md border w-fit shadow-inner transition-colors",
+                        "inline-flex items-center gap-1.5 text-xs font-bold py-1 px-3 rounded-md border w-fit shadow-inner transition-colors",
                         getStatusColor(item.Status)
                       )}>
-                        {item.Status === 'Given' && <CheckCircle2 className="w-3 h-3" />}
+                        {item.Status === 'Given' && <CheckCircle2 className="w-4 h-4" />}
                         {item.Status}
                       </span>
                       {item.Received_By && (
-                        <div className="flex items-center gap-1.5 text-xs text-emerald-400 font-bold ml-1 mt-1 drop-shadow-sm">
-                          <User className="w-3 h-3" />
+                        <div className="flex items-center gap-1.5 text-sm text-emerald-400 font-bold ml-1 mt-1 drop-shadow-sm">
+                          <User className="w-3.5 h-3.5" />
                           <span className="truncate max-w-[180px]" title={item.Received_By}>to {item.Received_By}</span>
                         </div>
                       )}
                     </div>
                   </td>
-                  <td className="px-6 py-4">
+                  <td className="px-6 py-5">
                     {item.Update_Date ? (
                       <div className="flex items-center justify-between gap-2 min-w-[120px]">
                         <div className="flex flex-col gap-0.5">
-                          <div className="flex items-center gap-1.5 text-[10px] font-bold text-slate-300">
+                          <div className="flex items-center gap-1.5 text-xs font-bold text-slate-300">
                             <span>{item.Update_Date}</span>
                             <span className="text-slate-500 font-normal">({item.Update_Day?.substring(0, 3)})</span>
                           </div>
-                          <div className="text-[10px] text-slate-500 font-mono">
+                          <div className="text-xs text-slate-500 font-mono">
                             {item.Update_Time}
                           </div>
                         </div>
@@ -364,14 +364,14 @@ export const DistributionTable = ({
                           className="p-1.5 hover:bg-rose-500/10 text-slate-600 hover:text-rose-500 rounded-md transition-all opacity-0 group-hover:opacity-100"
                           title="Clear Update Info"
                         >
-                          <Trash2 className="w-3 h-3" />
+                          <Trash2 className="w-4 h-4" />
                         </button>
                       </div>
                     ) : (
-                      <span className="text-[10px] text-slate-600 italic">No updates yet</span>
+                      <span className="text-xs text-slate-600 italic">No updates yet</span>
                     )}
                   </td>
-                  <td className="px-6 py-4">
+                  <td className="px-6 py-5">
                     <div className="flex items-center gap-2">
                       <div className="relative group/select">
                         <select

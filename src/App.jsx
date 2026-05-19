@@ -35,6 +35,7 @@ export default function App() {
   const [supabaseStatus, setSupabaseStatus] = React.useState("disconnected");
   const [errorMessage, setErrorMessage] = React.useState(null);
   const [view, setView] = React.useState("main"); // Fixed the ReferenceError!
+  const [activeTab, setActiveTab] = React.useState('register');
   const [appTitle, setAppTitle] = React.useState(
     () =>
       localStorage.getItem("app_distribution_title") ||
@@ -562,7 +563,34 @@ export default function App() {
         showResetButton={data.length > 0 && view === "main"}
       />
 
-      <main className="max-w-7xl mx-auto px-4 py-8 relative">
+      {view === "main" && data.length > 0 && (
+        <div className="w-full bg-slate-950 border-b border-slate-800 p-4 flex justify-center gap-4 shadow-sm relative z-10">
+          <button
+            onClick={() => setActiveTab('dashboard')}
+            className={cn(
+              "px-6 py-2 rounded-md transition-all font-bold tracking-wide flex items-center gap-2",
+              activeTab === 'dashboard'
+                ? "bg-blue-600 text-white shadow-lg shadow-blue-500/20"
+                : "bg-slate-900 text-slate-400 hover:bg-slate-800 border border-slate-800"
+            )}
+          >
+            📊 Live Dashboard Overview
+          </button>
+          <button
+            onClick={() => setActiveTab('register')}
+            className={cn(
+              "px-6 py-2 rounded-md transition-all font-bold tracking-wide flex items-center gap-2",
+              activeTab === 'register'
+                ? "bg-blue-600 text-white shadow-lg shadow-blue-500/20"
+                : "bg-slate-900 text-slate-400 hover:bg-slate-800 border border-slate-800"
+            )}
+          >
+            📁 Live Distribution Register
+          </button>
+        </div>
+      )}
+
+      <main className={cn("mx-auto px-4 py-8 relative transition-all", activeTab === 'register' && view === 'main' ? "w-full max-w-full px-4" : "max-w-7xl")}>
         <AnimatePresence mode="wait">
           {view === "dynamic" ? (
             <motion.div
@@ -580,13 +608,15 @@ export default function App() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
             >
-              <TitleHeader
-                appTitle={appTitle}
-                onChangeTitle={(t) => {
-                  setAppTitle(t);
-                  localStorage.setItem("app_distribution_title", t);
-                }}
-              />
+              {data.length === 0 || activeTab === 'dashboard' ? (
+                <TitleHeader
+                  appTitle={appTitle}
+                  onChangeTitle={(t) => {
+                    setAppTitle(t);
+                    localStorage.setItem("app_distribution_title", t);
+                  }}
+                />
+              ) : null}
 
               {data.length === 0 ? (
                 <div className="max-w-2xl mx-auto py-12">
@@ -594,51 +624,59 @@ export default function App() {
                 </div>
               ) : (
                 <>
-                  <AnalyticsHeader analytics={analytics} />
-                  <RecentUpdates
-                    recentUpdates={recentUpdates}
-                    lastRefreshed={lastRefreshed}
-                    onClearAllRecent={() =>
-                      setDismissedRecentIds(new Set(data.map((i) => i.HOF_ID)))
-                    }
-                    onDismissRecent={(id) =>
-                      setDismissedRecentIds((prev) => new Set([...prev, id]))
-                    }
-                    onCardClick={scrollToHofId}
-                  />
+                  {activeTab === 'dashboard' && (
+                    <>
+                      <AnalyticsHeader analytics={analytics} />
+                      <RecentUpdates
+                        recentUpdates={recentUpdates}
+                        lastRefreshed={lastRefreshed}
+                        onClearAllRecent={() =>
+                          setDismissedRecentIds(new Set(data.map((i) => i.HOF_ID)))
+                        }
+                        onDismissRecent={(id) =>
+                          setDismissedRecentIds((prev) => new Set([...prev, id]))
+                        }
+                        onCardClick={scrollToHofId}
+                      />
+                    </>
+                  )}
+                  
                   <DataIntegrityReport
                     importStats={importStats}
                     onClose={() => setImportStats(null)}
                   />
-                  <DistributionTable
-                    data={data}
-                    onStatusChange={handleStatusChange}
-                    onReceivedByChange={handleReceivedByChange}
-                    onClearUpdateInfo={async (id) => {
-                      const updated = data.map((item) =>
-                        String(item.HOF_ID) === String(id)
-                          ? {
-                              ...item,
-                              Update_Date: undefined,
-                              Update_Day: undefined,
-                              Update_Time: undefined,
-                            }
-                          : item,
-                      );
-                      setData(updated);
-                      localStorage.setItem(
-                        "rumal_distribution_data",
-                        JSON.stringify(updated),
-                      );
-                      await updateItemRemote(id, {
-                        Update_Date: null,
-                        Update_Day: null,
-                        Update_Time: null,
-                      });
-                    }}
-                    onExport={handleExport}
-                    onImportNew={() => setShowResetModal(true)}
-                  />
+
+                  {activeTab === 'register' && (
+                    <DistributionTable
+                      data={data}
+                      onStatusChange={handleStatusChange}
+                      onReceivedByChange={handleReceivedByChange}
+                      onClearUpdateInfo={async (id) => {
+                        const updated = data.map((item) =>
+                          String(item.HOF_ID) === String(id)
+                            ? {
+                                ...item,
+                                Update_Date: undefined,
+                                Update_Day: undefined,
+                                Update_Time: undefined,
+                              }
+                            : item,
+                        );
+                        setData(updated);
+                        localStorage.setItem(
+                          "rumal_distribution_data",
+                          JSON.stringify(updated),
+                        );
+                        await updateItemRemote(id, {
+                          Update_Date: null,
+                          Update_Day: null,
+                          Update_Time: null,
+                        });
+                      }}
+                      onExport={handleExport}
+                      onImportNew={() => setShowResetModal(true)}
+                    />
+                  )}
                 </>
               )}
             </motion.div>
