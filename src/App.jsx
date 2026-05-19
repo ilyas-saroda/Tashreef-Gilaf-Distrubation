@@ -131,11 +131,17 @@ export default function App() {
   };
 
   const scrollToHofId = (hofId) => {
-    window.dispatchEvent(
-      new CustomEvent("jump-to-hof", {
-        detail: { hofId },
-      }),
-    );
+    // 1. Instantly switch to the register tab so the table gets mounted into the DOM
+    setActiveTab('register');
+    
+    // 2. Wrap the custom event dispatcher in a small setTimeout to let the React state re-render the table first
+    setTimeout(() => {
+      window.dispatchEvent(
+        new CustomEvent("jump-to-hof", {
+          detail: { hofId },
+        }),
+      );
+    }, 100);
   };
 
   // Helper to map App updates to Supabase columns using detected schema
