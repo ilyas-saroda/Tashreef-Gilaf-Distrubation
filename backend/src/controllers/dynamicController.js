@@ -2,6 +2,7 @@ import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
 import * as XLSX from "xlsx";
+import logger from "../config/logger.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -78,9 +79,6 @@ export const loadDynamic = (req, res) => {
     return res.json(dynamicSheetCache);
   } catch (error) {
     console.error("[Dynamic Load Error]:", error);
-    return res.json({});
-  }
-};);
     return res.json({});
   }
 };

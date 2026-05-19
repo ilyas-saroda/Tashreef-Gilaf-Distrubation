@@ -2,6 +2,7 @@ import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
 import * as XLSX from "xlsx";
+import logger from "../config/logger.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -75,5 +76,4 @@ export const updateItem = (req, res) => {
     logger.error("[Main Item Update Error]", { error: error.message, stack: error.stack });
     return res.status(500).json({ success: false, error: error.message });
   }
-}; }
 };
