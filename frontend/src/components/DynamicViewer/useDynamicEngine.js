@@ -117,7 +117,8 @@ export function useDynamicEngine() {
     }
 
     try {
-      await fetch("http://localhost:5000/api/save-dynamic", {
+      const API_BASE = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000";
+      await fetch(`${API_BASE}/api/save-dynamic`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ data: payload }),

@@ -63,7 +63,8 @@ export default function App() {
 
   const updateSingleItemLocalExcel = async (hofId, updates) => {
     try {
-      await fetch("http://localhost:5000/api/update-item", {
+      const API_BASE = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000";
+      await fetch(`${API_BASE}/api/update-item`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ hofId, updates }),
