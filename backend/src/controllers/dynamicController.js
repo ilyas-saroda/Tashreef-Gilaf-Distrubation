@@ -63,7 +63,7 @@ export const loadDynamic = (req, res) => {
     }
     
     const wb = XLSX.readFile(dynamicPath);
-    console.log("📂 [File System]: Data loaded from physical Excel file.");
+    logger.info("📂 [File System]: Data loaded from physical Excel file.");
     if (!wb || !wb.SheetNames || wb.SheetNames.length === 0) {
       return res.json({});
     }
@@ -78,6 +78,9 @@ export const loadDynamic = (req, res) => {
     return res.json(dynamicSheetCache);
   } catch (error) {
     console.error("[Dynamic Load Error]:", error);
+    return res.json({});
+  }
+};);
     return res.json({});
   }
 };

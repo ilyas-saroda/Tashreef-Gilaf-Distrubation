@@ -72,7 +72,8 @@ export const updateItem = (req, res) => {
 
     return res.json({ success: true });
   } catch (error) {
-    console.error("[Main Item Update Error]:", error);
+    logger.error("[Main Item Update Error]", { error: error.message, stack: error.stack });
     return res.status(500).json({ success: false, error: error.message });
   }
+}; }
 };
