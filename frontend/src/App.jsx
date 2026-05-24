@@ -36,7 +36,7 @@ export default function App() {
   const [supabaseStatus, setSupabaseStatus] = React.useState("disconnected");
   const [errorMessage, setErrorMessage] = React.useState(null);
   const [view, setView] = React.useState("main"); // Fixed the ReferenceError!
-  const [activeTab, setActiveTab] = React.useState('register');
+  const [activeTab, setActiveTab] = React.useState("register");
   const [appTitle, setAppTitle] = React.useState(
     () =>
       localStorage.getItem("app_distribution_title") ||
@@ -46,7 +46,7 @@ export default function App() {
   const [dismissedRecentIds, setDismissedRecentIds] = React.useState(new Set());
   const [dbKeys, setDbKeys] = React.useState([]);
   const [importStats, setImportStats] = React.useState(null);
-  
+
   // Bulk Distribution State
   const [isBulkPanelOpen, setIsBulkPanelOpen] = React.useState(false);
   const [bulkAccNoInput, setBulkAccNoInput] = React.useState("");
@@ -56,25 +56,27 @@ export default function App() {
   // Live pre-check warnings for Bulk Distribution
   const livePreCheckWarnings = React.useMemo(() => {
     if (!bulkAccNoInput || !bulkAccNoInput.trim()) return [];
-    
+
     const rawIds = bulkAccNoInput
       .split(/[\s,\n]+/)
       .map((s) => s.replace(/[^0-9]/g, "").trim())
       .filter(Boolean);
-      
+
     if (rawIds.length === 0) return [];
 
     const warningsMap = new Map();
     rawIds.forEach((id) => {
-      const item = data.find((d) => String(d.AccNo) === id || String(d.HOF_ID) === id);
+      const item = data.find(
+        (d) => String(d.AccNo) === id || String(d.HOF_ID) === id,
+      );
       if (item && item.Status === "Given") {
         warningsMap.set(item.AccNo, {
           accNo: item.AccNo,
-          receivedBy: item.Received_By || "Unknown"
+          receivedBy: item.Received_By || "Unknown",
         });
       }
     });
-    
+
     return Array.from(warningsMap.values());
   }, [bulkAccNoInput, data]);
 
@@ -95,7 +97,8 @@ export default function App() {
 
   const updateSingleItemLocalExcel = async (hofId, updates) => {
     try {
-      const API_BASE = import.meta['env'].VITE_API_BASE_URL || "http://localhost:5000";
+      const API_BASE =
+        import.meta["env"].VITE_API_BASE_URL || "http://localhost:5000";
       await fetch(`${API_BASE}/api/update-item`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -165,8 +168,8 @@ export default function App() {
 
   const scrollToHofId = (hofId) => {
     // 1. Instantly switch to the register tab so the table gets mounted into the DOM
-    setActiveTab('register');
-    
+    setActiveTab("register");
+
     // 2. Wrap the custom event dispatcher in a small setTimeout to let the React state re-render the table first
     setTimeout(() => {
       window.dispatchEvent(
@@ -511,7 +514,9 @@ export default function App() {
     if (successfulUpdates.length === 0) return;
 
     const timestamps = getTimestampFields();
-    const updateIdsSet = new Set(successfulUpdates.map((u) => String(u.HOF_ID)));
+    const updateIdsSet = new Set(
+      successfulUpdates.map((u) => String(u.HOF_ID)),
+    );
 
     const newData = data.map((item) => {
       if (updateIdsSet.has(String(item.HOF_ID))) {
@@ -587,7 +592,7 @@ export default function App() {
   }, [data, dismissedRecentIds]);
 
   return (
-    <div className="min-h-screen bg-slate-950 font-sans text-slate-200">
+    <div className="min-h-screen bg-slate-50 font-sans text-slate-900">
       <ResetModal
         isOpen={showResetModal}
         onClose={() => setShowResetModal(false)}
@@ -595,16 +600,16 @@ export default function App() {
       />
 
       {/* Modern Compact View Toggle Bar at the very top */}
-      <div className="bg-slate-900 border-b border-slate-800 px-4 py-2 flex justify-between items-center text-xs">
-        <span className="text-slate-400 font-medium">System View Mode:</span>
+      <div className="bg-white border-b border-slate-200 px-4 py-2 flex justify-between items-center text-xs">
+        <span className="text-slate-500 font-medium">System View Mode:</span>
         <div className="flex gap-2">
           <button
             onClick={() => setView("main")}
             className={cn(
               "px-3 py-1 rounded transition-all font-semibold",
               view === "main"
-                ? "bg-emerald-500 text-slate-950 shadow"
-                : "bg-slate-800 text-slate-300 hover:bg-slate-700",
+                ? "mnc-btn-primary shadow"
+                : "bg-white border border-slate-200 text-slate-600 hover:bg-slate-50",
             )}
           >
             Tashrif Main Distribution (Online/Offline Sync)
@@ -614,8 +619,8 @@ export default function App() {
             className={cn(
               "px-3 py-1 rounded transition-all font-semibold",
               view === "dynamic"
-                ? "bg-blue-500 text-white shadow"
-                : "bg-slate-800 text-slate-300 hover:bg-slate-700",
+                ? "mnc-btn-primary shadow"
+                : "bg-white border border-slate-200 text-slate-600 hover:bg-slate-50",
             )}
           >
             Dynamic Excel Sheet Viewer (100% Offline No-Schema)
@@ -635,33 +640,44 @@ export default function App() {
       />
 
       {view === "main" && data.length > 0 && (
-        <div className="w-full bg-slate-950 border-b border-slate-800 p-4 flex justify-center gap-4 shadow-sm relative z-10">
+        <div className="w-full bg-white border-b border-slate-200 p-4 flex justify-center gap-4 shadow-sm relative z-10">
           <button
-            onClick={() => setActiveTab('dashboard')}
+            onClick={() => setActiveTab("dashboard")}
             className={cn(
               "px-6 py-2 rounded-md transition-all font-bold tracking-wide flex items-center gap-2",
-              activeTab === 'dashboard'
-                ? "bg-blue-600 text-white shadow-lg shadow-blue-500/20"
-                : "bg-slate-900 text-slate-400 hover:bg-slate-800 border border-slate-800"
+              activeTab === "dashboard"
+                ? "mnc-btn-primary shadow-lg"
+                : "bg-white text-slate-500 hover:bg-white border border-slate-200",
             )}
           >
             📊 Live Dashboard Overview
           </button>
           <button
-            onClick={() => setActiveTab('register')}
+            onClick={() => setActiveTab("register")}
             className={cn(
               "px-6 py-2 rounded-md transition-all font-bold tracking-wide flex items-center gap-2",
-              activeTab === 'register'
-                ? "bg-blue-600 text-white shadow-lg shadow-blue-500/20"
-                : "bg-slate-900 text-slate-400 hover:bg-slate-800 border border-slate-800"
+              activeTab === "register"
+                ? "mnc-btn-primary shadow-lg"
+                : "bg-white text-slate-500 hover:bg-white border border-slate-200",
             )}
           >
             📁 Live Distribution Register
           </button>
+          <button
+            onClick={() => setActiveTab("bulk")}
+            className={cn(
+              "px-6 py-2 rounded-md transition-all font-bold tracking-wide flex items-center gap-2",
+              activeTab === "bulk"
+                ? "mnc-btn-primary shadow-lg"
+                : "bg-white text-slate-500 hover:bg-white border border-slate-200",
+            )}
+          >
+            📦 Bulk Distribution Entry
+          </button>
         </div>
       )}
 
-      <main className={cn("mx-auto px-4 py-8 relative transition-all", activeTab === 'register' && view === 'main' ? "w-full max-w-full px-4" : "max-w-7xl")}>
+      <main className="max-w-7xl mx-auto px-4 py-8 relative transition-all">
         <AnimatePresence mode="wait">
           {view === "dynamic" ? (
             <motion.div
@@ -679,7 +695,7 @@ export default function App() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
             >
-              {data.length === 0 || activeTab === 'dashboard' ? (
+              {data.length === 0 || activeTab === "dashboard" ? (
                 <TitleHeader
                   appTitle={appTitle}
                   onChangeTitle={(t) => {
@@ -695,64 +711,72 @@ export default function App() {
                 </div>
               ) : (
                 <>
-                  {activeTab === 'dashboard' && (
+                  {activeTab === "dashboard" && (
                     <>
                       <AnalyticsHeader analytics={analytics} />
                       <RecentUpdates
                         recentUpdates={recentUpdates}
                         lastRefreshed={lastRefreshed}
                         onClearAllRecent={() =>
-                          setDismissedRecentIds(new Set(data.map((i) => i.HOF_ID)))
+                          setDismissedRecentIds(
+                            new Set(data.map((i) => i.HOF_ID)),
+                          )
                         }
                         onDismissRecent={(id) =>
-                          setDismissedRecentIds((prev) => new Set([...prev, id]))
+                          setDismissedRecentIds(
+                            (prev) => new Set([...prev, id]),
+                          )
                         }
                         onCardClick={scrollToHofId}
                       />
                     </>
                   )}
-                  
+
                   <DataIntegrityReport
                     importStats={importStats}
                     onClose={() => setImportStats(null)}
                   />
 
-                  {activeTab === 'register' && (
-                    <div className="flex flex-col gap-6 w-full">
-                      <BulkDistribution 
-                        data={data} 
-                        onBulkUpdateSuccess={handleBatchSyncState} 
-                      />
+                  {activeTab === "bulk" && (
+                    <BulkDistribution
+                      data={data}
+                      onBulkUpdateSuccess={(updatedRecords) => {
+                        handleBatchSyncState(updatedRecords);
+                      }}
+                    />
+                  )}
 
+                  {activeTab === "register" && (
+                    <div className="flex flex-col gap-6 w-full">
                       <DistributionTable
                         data={data}
                         onStatusChange={handleStatusChange}
-                      onReceivedByChange={handleReceivedByChange}
-                      onClearUpdateInfo={async (id) => {
-                        const updated = data.map((item) =>
-                          String(item.HOF_ID) === String(id)
-                            ? {
-                                ...item,
-                                Update_Date: undefined,
-                                Update_Day: undefined,
-                                Update_Time: undefined,
-                              }
-                            : item,
-                        );
-                        setData(updated);
-                        localStorage.setItem(
-                          "rumal_distribution_data",
-                          JSON.stringify(updated),
-                        );
-                        await updateItemRemote(id, {
-                          Update_Date: null,
-                          Update_Day: null,
-                          Update_Time: null,
-                        });
-                      }}
-                      onExport={handleExport}
-                      onImportNew={() => setShowResetModal(true)}
-                    />
+                        onReceivedByChange={handleReceivedByChange}
+                        onClearUpdateInfo={async (id) => {
+                          const updated = data.map((item) =>
+                            String(item.HOF_ID) === String(id)
+                              ? {
+                                  ...item,
+                                  Update_Date: undefined,
+                                  Update_Day: undefined,
+                                  Update_Time: undefined,
+                                }
+                              : item,
+                          );
+                          setData(updated);
+                          localStorage.setItem(
+                            "rumal_distribution_data",
+                            JSON.stringify(updated),
+                          );
+                          await updateItemRemote(id, {
+                            Update_Date: null,
+                            Update_Day: null,
+                            Update_Time: null,
+                          });
+                        }}
+                        onExport={handleExport}
+                        onImportNew={() => setShowResetModal(true)}
+                      />
                     </div>
                   )}
                 </>

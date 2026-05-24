@@ -43,15 +43,15 @@ export function DataIntegrityReport({ importStats, onClose }) {
             </div>
             <div className="grid grid-cols-1 gap-2 max-h-48 overflow-y-auto pr-4 custom-scrollbar">
                {importStats.duplicateEntries.map(entry => (
-                 <div key={entry.id} className="flex items-center gap-3 px-4 py-3 bg-slate-900/50 rounded-2xl border border-slate-800 group hover:border-amber-500/30 transition-all duration-300">
+                 <div key={entry.id} className="flex items-center gap-3 px-4 py-3 bg-white rounded-2xl border border-slate-200 group hover:border-amber-500/30 transition-all duration-300">
                    <div className="flex flex-col">
                      <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">HOF ID</span>
                      <span className="text-sm font-mono text-amber-500 font-bold">{entry.id}</span>
                    </div>
-                   <div className="h-6 w-px bg-slate-800" />
+                   <div className="h-6 w-px bg-white" />
                    <div className="flex flex-col overflow-hidden">
                      <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Full Name</span>
-                     <span className="text-sm text-slate-200 font-medium truncate">{entry.name}</span>
+                     <span className="text-sm text-slate-900 font-medium truncate">{entry.name}</span>
                    </div>
                  </div>
                ))}
@@ -70,15 +70,15 @@ export function DataIntegrityReport({ importStats, onClose }) {
             </div>
             <div className="grid grid-cols-1 gap-2 max-h-48 overflow-y-auto pr-4 custom-scrollbar">
                {importStats.skippedEntries.map((entry, idx) => (
-                 <div key={idx} className="flex items-center gap-3 px-4 py-3 bg-slate-900/50 rounded-2xl border border-slate-800 group hover:border-rose-500/30 transition-all duration-300">
+                 <div key={idx} className="flex items-center gap-3 px-4 py-3 bg-white rounded-2xl border border-slate-200 group hover:border-rose-500/30 transition-all duration-300">
                    <div className="flex flex-col">
                      <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">SN</span>
                      <span className="text-sm font-mono text-rose-500 font-bold">{entry.sn}</span>
                    </div>
-                   <div className="h-6 w-px bg-slate-800" />
+                   <div className="h-6 w-px bg-white" />
                    <div className="flex flex-col overflow-hidden">
                      <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Full Name</span>
-                     <span className="text-sm text-slate-200 font-medium truncate">{entry.name}</span>
+                     <span className="text-sm text-slate-900 font-medium truncate">{entry.name}</span>
                    </div>
                  </div>
                ))}

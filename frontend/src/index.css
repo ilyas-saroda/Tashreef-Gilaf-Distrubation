@@ -6,13 +6,21 @@
   --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
 }
 
+@layer base {
+  body {
+    background-color: #f8fafc !important; /* Clean light gray corporate backdrop */
+    color: #0f172a !important; /* High contrast sharp dark slate slate text */
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  }
+}
+
 :root {
-  background-color: #0f172a;
-  color: #f8fafc;
+  background-color: #f8fafc;
+  color: #0f172a;
 }
 
 .markdown-body {
-  @apply text-slate-300;
+  @apply text-slate-800;
 }
 
 .custom-scrollbar::-webkit-scrollbar {
@@ -24,10 +32,52 @@
 }
 
 .custom-scrollbar::-webkit-scrollbar-thumb {
-  background: rgba(245, 158, 11, 0.2);
+  background: rgba(148, 163, 184, 0.5);
   border-radius: 10px;
 }
 
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: rgba(245, 158, 11, 0.4);
+  background: rgba(100, 116, 139, 0.8);
+}
+
+/* Global MNC Structural Classes applied universally */
+.mnc-card-global {
+  background-color: #ffffff !important;
+  border: 1px solid #e2e8f0 !important;
+  border-radius: 12px !important;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05), 0 1px 2px -1px rgba(0, 0, 0, 0.05) !important;
+}
+
+.mnc-input-global {
+  background-color: #ffffff !important;
+  border: 1px solid #cbd5e1 !important;
+  color: #0f172a !important;
+  border-radius: 6px !important;
+  transition: all 0.15s ease-in-out !important;
+}
+.mnc-input-global:focus {
+  border-color: #64748b !important;
+  outline: none !important;
+  box-shadow: 0 0 0 2px rgba(100, 116, 139, 0.1) !important;
+}
+
+.mnc-table-th-global {
+  background-color: #f8fafc !important;
+  color: #475569 !important;
+  font-size: 12px !important;
+  font-weight: 600 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.05em !important;
+  border-bottom: 1px solid #e2e8f0 !important;
+}
+
+.mnc-btn-primary {
+  background-color: #0f172a !important;
+  color: #ffffff !important;
+  font-weight: 500 !important;
+  border-radius: 6px !important;
+  transition: background-color 0.15s ease-in-out !important;
+}
+.mnc-btn-primary:hover {
+  background-color: #000000 !important;
 }

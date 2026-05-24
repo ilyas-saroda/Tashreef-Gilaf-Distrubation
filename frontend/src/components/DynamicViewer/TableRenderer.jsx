@@ -19,14 +19,14 @@ export function TableRenderer({
   uniqueColumnValues
 }) {
   return (
-    <div className="bg-slate-900 border border-slate-800 rounded-xl shadow-lg overflow-x-auto max-h-[600px] custom-scrollbar" ref={dropdownRef}>
+    <div className="mnc-card-global overflow-x-auto max-h-[600px] custom-scrollbar" ref={dropdownRef}>
       <table className="w-full border-collapse text-left text-xs">
-        <thead className="bg-slate-950 text-slate-400 sticky top-0 z-10 border-b border-slate-800">
+        <thead className="bg-white text-slate-500 sticky top-0 z-10 border-b border-slate-200">
           <tr>
             {headers.map((header) => (
               <th
                 key={header}
-                className="p-3 font-semibold min-w-[160px] align-top"
+                className="mnc-table-th-global p-3 font-semibold min-w-[160px] align-top"
               >
                 <FilterDropdown 
                   header={header}
@@ -40,14 +40,14 @@ export function TableRenderer({
             ))}
           </tr>
         </thead>
-        <tbody className="divide-y divide-slate-800/60 bg-slate-900/40">
+        <tbody className="divide-y divide-slate-800/60 bg-white/40">
           {filteredData.map((row) => {
             const originalIndex = row.__originalIndex;
             
             return (
               <tr
                 key={originalIndex}
-                className="hover:bg-slate-800/60 transition-colors group"
+                className="hover:bg-slate-50 transition-colors group"
               >
                 {headers.map((header) => {
                   const isEditing =
@@ -58,7 +58,7 @@ export function TableRenderer({
                   return (
                     <td
                       key={header}
-                      className="p-3 border-r border-slate-800/40 relative min-w-[160px]"
+                      className="p-3 border-r border-slate-200/40 relative min-w-[160px]"
                     >
                       {isEditing ? (
                         <div className="flex items-center gap-1.5">
@@ -70,20 +70,20 @@ export function TableRenderer({
                               e.key === "Enter" &&
                               handleCellEditSave(originalIndex, header)
                             }
-                            className="w-full bg-slate-950 border border-blue-500 rounded px-2 py-1.5 text-xs text-slate-200 focus:outline-none font-medium shadow-inner"
+                            className="mnc-input-global w-full px-2 py-1.5 text-xs focus:outline-none font-medium"
                             autoFocus
                           />
                           <button
                             onClick={() =>
                               handleCellEditSave(originalIndex, header)
                             }
-                            className="p-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded transition-colors shadow-md z-10 relative"
+                            className="p-1.5 mnc-btn-primary rounded transition-colors shadow-md z-10 relative"
                           >
                             <Check className="w-3.5 h-3.5" />
                           </button>
                           <button
                             onClick={() => setEditingCell(null)}
-                            className="p-1.5 bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-slate-200 rounded transition-colors shadow-md border border-slate-700 z-10 relative"
+                            className="p-1.5 bg-white hover:bg-slate-100 text-slate-500 hover:text-slate-900 rounded transition-colors shadow-md border border-slate-200 z-10 relative"
                           >
                             <X className="w-3.5 h-3.5" />
                           </button>
@@ -96,7 +96,7 @@ export function TableRenderer({
                             setActiveDropdown(null);
                           }}
                         >
-                          <span className="text-slate-300 font-medium truncate">
+                          <span className="text-slate-900 font-medium truncate">
                             {String(val ?? "")}
                           </span>
                           <button
@@ -104,7 +104,7 @@ export function TableRenderer({
                               e.stopPropagation();
                               handleCellEditStart(originalIndex, header, val);
                             }}
-                            className="opacity-0 group-hover:opacity-100 p-1.5 text-slate-500 hover:text-blue-400 hover:bg-blue-500/10 rounded transition-all absolute right-2 top-1/2 -translate-y-1/2"
+                            className="opacity-0 group-hover:opacity-100 p-1.5 text-slate-500 hover:text-blue-600 hover:bg-blue-50/10 rounded transition-all absolute right-2 top-1/2 -translate-y-1/2"
                             title="Edit cell"
                           >
                             <Edit2 className="w-3.5 h-3.5" />

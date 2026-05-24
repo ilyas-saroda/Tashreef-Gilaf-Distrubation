@@ -75,7 +75,7 @@ export const ExcelUpload = ({ onUpload }) => {
         "relative rounded-xl border-2 border-dashed transition-all duration-200 p-12 flex flex-col items-center justify-center cursor-pointer group",
         isDragging 
           ? "border-emerald-500 bg-emerald-500/10" 
-          : "border-slate-700 hover:border-emerald-500/50 hover:bg-slate-800/50"
+          : "border-slate-200 hover:border-emerald-500/50 hover:bg-slate-50"
       )}
       onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
       onDragLeave={() => setIsDragging(false)}
@@ -90,12 +90,12 @@ export const ExcelUpload = ({ onUpload }) => {
         onChange={(e) => e.target.files?.[0] && processFile(e.target.files[0])}
       />
       
-      <div className="p-4 rounded-full bg-slate-800 mb-4 group-hover:scale-110 transition-transform">
+      <div className="p-4 rounded-full bg-white mb-4 group-hover:scale-110 transition-transform">
         <Upload className="w-8 h-8 text-emerald-500" />
       </div>
       
-      <h3 className="text-xl font-medium text-slate-100 mb-2">Upload Excel Data</h3>
-      <p className="text-sm text-slate-400 text-center max-w-xs">
+      <h3 className="text-xl font-medium text-slate-900 mb-2">Upload Excel Data</h3>
+      <p className="text-sm text-slate-500 text-center max-w-xs">
         Drag and drop your .xlsx file here or click to browse.
         Support for AccNo, SN, Name, and HOF_ID.
       </p>

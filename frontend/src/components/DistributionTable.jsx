@@ -19,6 +19,70 @@ export const DistributionTable = ({
   const [currentPage, setCurrentPage] = React.useState(1);
   const rowsPerPage = 15;
 
+  const [suggestions, setSuggestions] = React.useState([]);
+  const [showDropdown, setShowDropdown] = React.useState(false);
+  const searchContainerRef = React.useRef(null);
+
+  React.useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (searchContainerRef.current && !searchContainerRef.current.contains(e.target)) {
+        setShowDropdown(false);
+      }
+    };
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') {
+        setShowDropdown(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, []);
+
+  const handleSearchChange = (e) => {
+    const val = e.target.value;
+    setSearchTerm(val);
+    
+    const term = val.toLowerCase().trim();
+    if (term.length < 1) {
+      setSuggestions([]);
+      setShowDropdown(false);
+      return;
+    }
+
+    const accNoStartsWith = [];
+    const accNoIncludes = [];
+    const otherMatches = [];
+
+    for (const item of data) {
+      if (accNoStartsWith.length + accNoIncludes.length + otherMatches.length >= 7) break;
+
+      const accStr = item.AccNo !== null && item.AccNo !== undefined ? String(item.AccNo).toLowerCase() : '';
+      if (accStr.startsWith(term)) {
+        accNoStartsWith.push(item);
+        continue;
+      }
+      if (accStr.includes(term)) {
+        accNoIncludes.push(item);
+        continue;
+      }
+
+      const nameStr = item.Full_Name ? item.Full_Name.toLowerCase() : '';
+      const hofStr = item.HOF_ID !== null && item.HOF_ID !== undefined ? String(item.HOF_ID).toLowerCase() : '';
+      
+      if (nameStr.includes(term) || hofStr.includes(term)) {
+        otherMatches.push(item);
+      }
+    }
+
+    const sortedSuggestions = [...accNoStartsWith, ...accNoIncludes, ...otherMatches].slice(0, 7);
+    setSuggestions(sortedSuggestions);
+    setShowDropdown(sortedSuggestions.length > 0);
+  };
+
   // Get unique values for filters with counts
   const filterOptions = React.useMemo(() => {
     const receivers = new Map();
@@ -63,18 +127,28 @@ export const DistributionTable = ({
   const filteredData = React.useMemo(() => {
     const term = searchTerm.toLowerCase();
     
-    const results = data.filter(item => {
-      const matchesSearch = !term || 
-        item.Full_Name?.toLowerCase().includes(term) || 
-        item.HOF_ID?.toString().toLowerCase().includes(term) ||
-        item.AccNo?.toString().toLowerCase().includes(term) ||
-        item.SN?.toString().toLowerCase().includes(term) ||
-        item.Status?.toLowerCase().includes(term) ||
-        (item.Update_Date && item.Update_Date.toLowerCase().includes(term)) ||
-        (item.Update_Day && item.Update_Day.toLowerCase().includes(term)) ||
-        (item.Update_Time && item.Update_Time.toLowerCase().includes(term)) ||
-        (item.Received_By && item.Received_By.toLowerCase().includes(term));
+    return data.filter(item => {
+      // High-speed short-circuit sequential checker
+      const checkSearch = () => {
+        if (!term) return true;
+        
+        // Step 1: Highest Priority: Account Number matches return true instantly.
+        if (item.AccNo !== null && item.AccNo !== undefined && String(item.AccNo).toLowerCase().includes(term)) return true;
+        
+        // Step 2: Fallback checks executed sequentially
+        if (item.Full_Name && item.Full_Name.toLowerCase().includes(term)) return true;
+        if (item.HOF_ID !== null && item.HOF_ID !== undefined && String(item.HOF_ID).toLowerCase().includes(term)) return true;
+        if (item.SN !== null && item.SN !== undefined && String(item.SN).toLowerCase().includes(term)) return true;
+        if (item.Status && item.Status.toLowerCase().includes(term)) return true;
+        if (item.Received_By && item.Received_By.toLowerCase().includes(term)) return true;
+        if (item.Update_Date && item.Update_Date.toLowerCase().includes(term)) return true;
+        if (item.Update_Day && item.Update_Day.toLowerCase().includes(term)) return true;
+        if (item.Update_Time && item.Update_Time.toLowerCase().includes(term)) return true;
+        
+        return false;
+      };
 
+      const matchesSearch = checkSearch();
       const matchesStatus = statusFilter === 'All' || item.Status === statusFilter;
       const matchesReceiver = receiverFilter === 'All' || 
         (item.Received_By && item.Received_By.toLowerCase() === receiverFilter.toLowerCase());
@@ -83,43 +157,6 @@ export const DistributionTable = ({
 
       return matchesSearch && matchesStatus && matchesReceiver && matchesDate && matchesDay;
     });
-
-    // If there's a search term, prioritize results where Acc No or HOF ID matches
-    if (term) {
-      return [...results].sort((a, b) => {
-        const aAcc = a.AccNo?.toString().toLowerCase() || '';
-        const bAcc = b.AccNo?.toString().toLowerCase() || '';
-        const aHof = a.HOF_ID?.toString().toLowerCase() || '';
-        const bHof = b.HOF_ID?.toString().toLowerCase() || '';
-
-        const aHasAccMatch = aAcc.includes(term);
-        const bHasAccMatch = bAcc.includes(term);
-        const aHasHofMatch = aHof.includes(term);
-        const bHasHofMatch = bHof.includes(term);
-
-        // Priority 1: Exact matches for AccNo or HOF_ID
-        const aExactMatch = aAcc === term || aHof === term;
-        const bExactMatch = bAcc === term || bHof === term;
-        if (aExactMatch && !bExactMatch) return -1;
-        if (!aExactMatch && bExactMatch) return 1;
-
-        // Priority 2: Starts with term for AccNo or HOF_ID
-        const aStarts = aAcc.startsWith(term) || aHof.startsWith(term);
-        const bStarts = bAcc.startsWith(term) || bHof.startsWith(term);
-        if (aStarts && !bStarts) return -1;
-        if (!aStarts && bStarts) return 1;
-
-        // Priority 3: Contains term in AccNo or HOF_ID
-        const aContains = aHasAccMatch || aHasHofMatch;
-        const bContains = bHasAccMatch || bHasHofMatch;
-        if (aContains && !bContains) return -1;
-        if (!aContains && bContains) return 1;
-
-        return 0; // Maintain order otherwise
-      });
-    }
-
-    return results;
   }, [data, searchTerm, statusFilter, receiverFilter, dateFilter, dayFilter]);
 
   // Pagination logic
@@ -148,8 +185,8 @@ export const DistributionTable = ({
           const element = document.getElementById(`hof-row-${hofId}`);
           if (element) {
             element.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            element.classList.add('bg-emerald-500/20');
-            setTimeout(() => element.classList.remove('bg-emerald-500/20'), 2000);
+            element.classList.add('bg-emerald-50');
+            setTimeout(() => element.classList.remove('bg-emerald-50'), 2000);
           }
         }, 150);
       }
@@ -161,15 +198,15 @@ export const DistributionTable = ({
 
   const getStatusColor = (status) => {
     switch (status) {
-      case 'Given': return 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20';
-      case 'Not Allowed': return 'bg-rose-500/10 text-rose-400 border-rose-500/20';
-      case 'Pending': return 'bg-amber-500/10 text-amber-400 border-amber-500/20';
-      default: return 'bg-slate-500/10 text-slate-400 border-slate-500/20';
+      case 'Given': return 'bg-emerald-50 text-emerald-700 border-emerald-200';
+      case 'Not Allowed': return 'bg-rose-50 text-rose-700 border-rose-200';
+      case 'Pending': return 'bg-slate-100 text-slate-700 border-slate-200';
+      default: return 'bg-slate-100 text-slate-500 border-slate-200';
     }
   };
 
   return (
-    <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-xl">
+    <div className={cn("mnc-card-global", "bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm")}>
       {/* Suggestions for Receiver Names */}
       <datalist id="receiver-list">
         {filterOptions.receivers.map(([name]) => (
@@ -178,18 +215,36 @@ export const DistributionTable = ({
       </datalist>
 
       {/* Table Header / Toolbar */}
-      <div className="p-4 sm:p-6 border-b border-slate-800 bg-slate-900/50 space-y-4">
+      <div className="p-4 sm:p-6 border-b border-slate-200 bg-white space-y-4">
         {/* Search and Filters Row */}
         <div className="flex flex-col lg:flex-row gap-4 items-start lg:items-center justify-between">
-          <div className="relative w-full lg:max-w-xs">
+          <div className="relative w-full lg:max-w-xs" ref={searchContainerRef}>
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
             <input
               type="text"
               placeholder="Search by HOF ID, Acc No, Name..."
-              className="w-full bg-slate-950 border border-slate-800 rounded-lg py-2 pl-10 pr-4 text-sm text-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500/50 transition-all shadow-inner"
+              className={cn("mnc-input-global", "w-full bg-slate-50 border border-slate-200 rounded-md py-2 pl-10 pr-4 text-sm text-slate-900 focus:outline-none focus:border-slate-400 focus:bg-white transition-all")}
               value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
+              onChange={handleSearchChange}
+              onFocus={() => { if (suggestions.length > 0) setShowDropdown(true); }}
             />
+            {showDropdown && (
+              <div className="absolute z-50 left-0 right-0 mt-1 bg-white border border-slate-200 rounded-lg shadow-lg overflow-hidden max-h-64 overflow-y-auto">
+                {suggestions.map((item, idx) => (
+                  <div
+                    key={`${item.HOF_ID}-${idx}`}
+                    className="hover:bg-slate-50 cursor-pointer text-slate-900 py-2.5 px-3 text-sm border-b border-slate-100 last:border-0 flex items-start gap-2"
+                    onClick={() => {
+                      setSearchTerm(String(item.AccNo || item.HOF_ID));
+                      setShowDropdown(false);
+                    }}
+                  >
+                    <span className="font-mono font-bold text-slate-600 shrink-0 mt-0.5">[{item.AccNo}]</span> 
+                    <span className="font-medium whitespace-normal break-words text-left">{item.Full_Name}</span>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
           
           <div className="flex items-center flex-wrap gap-2 w-full lg:w-auto">
@@ -198,7 +253,7 @@ export const DistributionTable = ({
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
-              className="bg-slate-950 border border-slate-800 rounded-lg py-2 px-3 text-sm text-slate-300 focus:outline-none focus:border-emerald-500/50 flex-1 sm:flex-none min-w-[120px]"
+              className={cn("mnc-input-global", "bg-slate-50 border border-slate-200 rounded-md py-2 px-3 text-sm text-slate-900 focus:outline-none focus:border-slate-400 focus:bg-white transition-all flex-1 sm:flex-none min-w-[120px]")}
             >
               <option value="All">All Status ({data.length})</option>
               <option value="Pending">Pending ({filterOptions.statuses.Pending})</option>
@@ -209,7 +264,7 @@ export const DistributionTable = ({
             <select
               value={dateFilter}
               onChange={(e) => setDateFilter(e.target.value)}
-              className="bg-slate-950 border border-slate-800 rounded-lg py-2 px-3 text-sm text-slate-300 focus:outline-none focus:border-emerald-500/50 flex-1 sm:flex-none min-w-[110px]"
+              className={cn("mnc-input-global", "bg-slate-50 border border-slate-200 rounded-md py-2 px-3 text-sm text-slate-900 focus:outline-none focus:border-slate-400 focus:bg-white transition-all flex-1 sm:flex-none min-w-[110px]")}
             >
               <option value="All">All Dates</option>
               {filterOptions.dates.map(([date, count]) => (
@@ -220,7 +275,7 @@ export const DistributionTable = ({
             <select
               value={dayFilter}
               onChange={(e) => setDayFilter(e.target.value)}
-              className="bg-slate-950 border border-slate-800 rounded-lg py-2 px-3 text-sm text-slate-300 focus:outline-none focus:border-emerald-500/50 flex-1 sm:flex-none min-w-[100px]"
+              className={cn("mnc-input-global", "bg-slate-50 border border-slate-200 rounded-md py-2 px-3 text-sm text-slate-900 focus:outline-none focus:border-slate-400 focus:bg-white transition-all flex-1 sm:flex-none min-w-[100px]")}
             >
               <option value="All">All Days</option>
               {filterOptions.days.map(([day, count]) => (
@@ -235,7 +290,7 @@ export const DistributionTable = ({
                 placeholder="By Receiver..."
                 value={receiverFilter === 'All' ? '' : receiverFilter}
                 onChange={(e) => setReceiverFilter(e.target.value || 'All')}
-                className="bg-slate-950 border border-slate-800 rounded-lg py-2 px-3 text-sm text-slate-300 focus:outline-none focus:border-emerald-500/50 w-full sm:w-32 transition-all"
+                className={cn("mnc-input-global", "bg-slate-50 border border-slate-200 rounded-md py-2 px-3 text-sm text-slate-900 focus:outline-none focus:border-slate-400 focus:bg-white transition-all w-full sm:w-32")}
               />
             </div>
 
@@ -248,7 +303,7 @@ export const DistributionTable = ({
                   setDateFilter('All');
                   setDayFilter('All');
                 }}
-                className="text-emerald-500 hover:text-emerald-400 text-[10px] font-black uppercase tracking-tighter hover:underline transition-all px-2"
+                className="text-slate-500 hover:text-slate-900 text-[10px] font-bold uppercase tracking-tighter hover:underline transition-all px-2"
               >
                 Reset
               </button>
@@ -259,22 +314,22 @@ export const DistributionTable = ({
         {/* Stats and Quick Info Row */}
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pt-2">
           <div className="flex flex-wrap items-center gap-3">
-            <div className="flex items-center gap-2 px-2.5 py-1.5 rounded-md bg-slate-950/50 border border-slate-800/50 text-[10px] font-bold">
-              <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse"></span>
-              <span className="text-slate-400 uppercase tracking-widest">Found: <span className="text-white ml-1">{filteredData.length}</span></span>
+            <div className="flex items-center gap-2 px-2.5 py-1.5 rounded-md bg-slate-50 border border-slate-200 text-[10px] font-semibold text-slate-600">
+              <span className="w-1.5 h-1.5 rounded-full bg-blue-500"></span>
+              <span className="uppercase tracking-widest">Found: <span className="text-slate-900 ml-1">{filteredData.length}</span></span>
             </div>
-            <div className="flex items-center gap-2 px-2.5 py-1.5 rounded-md bg-emerald-500/5 border border-emerald-500/10 text-[10px] font-bold">
-              <CheckCircle2 className="w-3 h-3 text-emerald-500" />
-              <span className="text-slate-400 uppercase tracking-widest">Given: <span className="text-emerald-500 ml-1">{filteredData.filter(i => i.Status === 'Given').length}</span></span>
+            <div className="flex items-center gap-2 px-2.5 py-1.5 rounded-md bg-emerald-50 border border-emerald-100 text-[10px] font-semibold text-emerald-700">
+              <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+              <span className="uppercase tracking-widest">Given: <span className="text-emerald-800 ml-1">{filteredData.filter(i => i.Status === 'Given').length}</span></span>
             </div>
-            <div className="flex items-center gap-2 px-2.5 py-1.5 rounded-md bg-amber-500/5 border border-amber-500/10 text-[10px] font-bold">
-              <div className="w-3 h-3 rounded-full border border-amber-500/30"></div>
-              <span className="text-slate-400 uppercase tracking-widest">Pending: <span className="text-amber-500 ml-1">{filteredData.filter(i => i.Status === 'Pending').length}</span></span>
+            <div className="flex items-center gap-2 px-2.5 py-1.5 rounded-md bg-amber-50 border border-amber-100 text-[10px] font-semibold text-amber-700">
+              <div className="w-3 h-3 rounded-full border border-amber-300 bg-amber-100"></div>
+              <span className="uppercase tracking-widest">Pending: <span className="text-amber-800 ml-1">{filteredData.filter(i => i.Status === 'Pending').length}</span></span>
             </div>
           </div>
 
           {receiverFilter !== 'All' && (
-            <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-[11px] font-bold text-emerald-400 max-w-full">
+            <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-100 border border-slate-200 text-[11px] font-medium text-slate-700 max-w-full">
                <User className="w-3.5 h-3.5 shrink-0" />
                <span className="truncate">Summary for: {receiverFilter}</span>
             </div>
@@ -283,17 +338,17 @@ export const DistributionTable = ({
       </div>
 
       {/* Action Buttons Row */}
-      <div className="px-6 py-4 border-b border-slate-800 bg-slate-900/20 flex flex-wrap items-center gap-3">
+      <div className="px-6 py-4 border-b border-slate-200 bg-slate-50/50 flex flex-wrap items-center gap-3">
           <button 
             onClick={onImportNew}
-            className="flex items-center gap-2 px-4 py-2 border border-slate-700 hover:bg-slate-800 text-slate-300 text-sm font-medium rounded-lg transition-colors"
+            className="flex items-center gap-2 px-4 py-2 border border-slate-200 hover:bg-slate-100 text-slate-700 text-sm font-medium rounded-md transition-colors shadow-sm bg-white"
           >
-            <FileSpreadsheet className="w-4 h-4" />
+            <FileSpreadsheet className="w-4 h-4 text-slate-500" />
             <span>New Import</span>
           </button>
           <button 
             onClick={() => onExport(filteredData)}
-            className="flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-medium rounded-lg transition-colors shadow-lg shadow-emerald-900/20"
+            className="flex items-center gap-2 px-4 py-2 mnc-btn-primary text-sm font-medium rounded-md transition-colors shadow-sm"
           >
             <Download className="w-4 h-4" />
             <span>Export Excel</span>
@@ -301,100 +356,100 @@ export const DistributionTable = ({
         </div>
 
       {/* Table Body */}
-      <div className="overflow-x-auto">
+      <div className="overflow-x-auto scrolling-touch">
         <table className="w-full text-left border-collapse">
-          <thead>
-            <tr className="bg-slate-950/50 text-slate-400 text-sm font-bold uppercase tracking-widest">
-              <th className="px-6 py-5">SN</th>
-              <th className="px-6 py-5">Acc No</th>
-              <th className="px-6 py-5">Full Name</th>
-              <th className="px-6 py-5">HOF ID</th>
-              <th className="px-6 py-5">Status</th>
-              <th className="px-6 py-5">Last Updated</th>
-              <th className="px-6 py-5">Action</th>
+          <thead className="bg-slate-50">
+            <tr>
+              <th className={cn("mnc-table-th-global", "text-[11px] font-semibold tracking-wider text-slate-500 uppercase py-3.5 px-4 border-b border-slate-200")}>SN</th>
+              <th className={cn("mnc-table-th-global", "text-[11px] font-semibold tracking-wider text-slate-500 uppercase py-3.5 px-4 border-b border-slate-200")}>Acc No</th>
+              <th className={cn("mnc-table-th-global", "text-[11px] font-semibold tracking-wider text-slate-500 uppercase py-3.5 px-4 border-b border-slate-200")}>Full Name</th>
+              <th className={cn("mnc-table-th-global", "text-[11px] font-semibold tracking-wider text-slate-500 uppercase py-3.5 px-4 border-b border-slate-200")}>HOF ID</th>
+              <th className={cn("mnc-table-th-global", "text-[11px] font-semibold tracking-wider text-slate-500 uppercase py-3.5 px-4 border-b border-slate-200")}>Status</th>
+              <th className={cn("mnc-table-th-global", "text-[11px] font-semibold tracking-wider text-slate-500 uppercase py-3.5 px-4 border-b border-slate-200")}>Last Updated</th>
+              <th className={cn("mnc-table-th-global", "text-[11px] font-semibold tracking-wider text-slate-500 uppercase py-3.5 px-4 border-b border-slate-200")}>Action</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-800">
+          <tbody className="bg-white">
             {paginatedData.length > 0 ? (
               paginatedData.map((item, idx) => (
                 <tr 
                   key={`${item.HOF_ID}-${idx}`} 
                   id={`hof-row-${item.HOF_ID}`}
-                  className="group hover:bg-slate-800/30 transition-colors"
+                  className="border-b border-slate-100 last:border-b-0 hover:bg-slate-50/60 transition-colors duration-100 group"
                 >
-                  <td className="px-6 py-5 text-base text-slate-400">{item.SN}</td>
-                  <td className="px-6 py-5 text-base font-mono text-slate-500 tracking-wide">{item.AccNo}</td>
-                  <td className="px-6 py-5">
-                    <span className="text-base font-bold text-slate-200 group-hover:text-emerald-400 transition-colors tracking-wide">
+                  <td className="text-[15px] text-slate-900 font-normal py-3 px-4">{item.SN}</td>
+                  <td className="text-[15px] text-slate-900 font-normal py-3 px-4 font-mono">{item.AccNo}</td>
+                  <td className="text-[15px] text-slate-900 font-normal py-3 px-4">
+                    <span className="font-semibold text-slate-900">
                       {item.Full_Name}
                     </span>
                   </td>
-                  <td className="px-6 py-5 text-base font-mono text-slate-400 text-emerald-500/70 tracking-wide">{item.HOF_ID}</td>
-                  <td className="px-6 py-5">
-                    <div className="flex flex-col">
+                  <td className="text-[15px] text-slate-900 font-normal py-3 px-4 font-mono text-slate-500">{item.HOF_ID}</td>
+                  <td className="text-[15px] text-slate-900 font-normal py-3 px-4">
+                    <div className="flex flex-col items-start">
                       <span className={cn(
-                        "inline-flex items-center gap-1.5 text-xs font-bold py-1 px-3 rounded-md border w-fit shadow-inner transition-colors",
+                        "inline-flex items-center gap-1.5 font-medium text-xs px-2.5 py-0.5 rounded-md border",
                         getStatusColor(item.Status)
                       )}>
                         {item.Status === 'Given' && <CheckCircle2 className="w-4 h-4" />}
                         {item.Status}
                       </span>
                       {item.Received_By && (
-                        <div className="flex items-center gap-1.5 text-sm text-emerald-400 font-bold ml-1 mt-1 drop-shadow-sm">
+                        <div className="flex items-center gap-1 text-[13px] text-slate-700 font-medium mt-1">
                           <User className="w-3.5 h-3.5" />
-                          <span className="truncate max-w-[180px]" title={item.Received_By}>to {item.Received_By}</span>
+                          <span className="truncate max-w-[140px]" title={item.Received_By}>to {item.Received_By}</span>
                         </div>
                       )}
                     </div>
                   </td>
-                  <td className="px-6 py-5">
+                  <td className="text-[15px] text-slate-900 font-normal py-3 px-4">
                     {item.Update_Date ? (
-                      <div className="flex items-center justify-between gap-2 min-w-[120px]">
+                      <div className="flex items-center justify-between gap-2 min-w-[110px]">
                         <div className="flex flex-col gap-0.5">
-                          <div className="flex items-center gap-1.5 text-xs font-bold text-slate-300">
-                            <span>{item.Update_Date}</span>
-                            <span className="text-slate-500 font-normal">({item.Update_Day?.substring(0, 3)})</span>
+                          <div className="flex items-center gap-1 text-[13px] text-slate-900">
+                            <span className="font-medium">{item.Update_Date}</span>
+                            <span className="text-slate-500">({item.Update_Day?.substring(0, 3)})</span>
                           </div>
-                          <div className="text-xs text-slate-500 font-mono">
+                          <div className="text-[13px] text-slate-500 font-mono">
                             {item.Update_Time}
                           </div>
                         </div>
                         <button 
                           onClick={() => onClearUpdateInfo(item.HOF_ID)}
-                          className="p-1.5 hover:bg-rose-500/10 text-slate-600 hover:text-rose-500 rounded-md transition-all opacity-0 group-hover:opacity-100"
+                          className="p-1.5 hover:bg-rose-50 text-slate-500 hover:text-rose-600 rounded-md transition-all opacity-0 group-hover:opacity-100"
                           title="Clear Update Info"
                         >
                           <Trash2 className="w-4 h-4" />
                         </button>
                       </div>
                     ) : (
-                      <span className="text-xs text-slate-600 italic">No updates yet</span>
+                      <span className="text-[13px] text-slate-500 italic">No updates</span>
                     )}
                   </td>
-                  <td className="px-6 py-5">
+                  <td className="text-[15px] text-slate-900 font-normal py-3 px-4">
                     <div className="flex items-center gap-2">
                       <div className="relative group/select">
                         <select
                           value={item.Status}
                           onChange={(e) => onStatusChange(item.HOF_ID, e.target.value)}
-                          className="bg-slate-950 border border-slate-800 rounded-lg py-1.5 pl-3 pr-8 text-xs text-slate-300 focus:outline-none focus:border-emerald-500/50 appearance-none cursor-pointer hover:bg-slate-900 transition-all w-32"
+                          className={cn("mnc-input-global", "bg-slate-50 border border-slate-200 focus:border-slate-400 focus:bg-white text-slate-900 rounded-md text-xs py-1 px-2.5 transition-all w-28 appearance-none cursor-pointer pl-2 pr-6")}
                         >
                           <option value="Pending">Pending</option>
                           <option value="Given">Given</option>
                           <option value="Not Allowed">Not Allowed</option>
                         </select>
-                        <ChevronLeft className="absolute right-2 top-1/2 -translate-y-1/2 w-3 h-3 text-slate-600 -rotate-90 pointer-events-none group-hover/select:text-emerald-500 transition-colors" />
+                        <ChevronLeft className="absolute right-2 top-1/2 -translate-y-1/2 w-3 h-3 text-slate-500 -rotate-90 pointer-events-none group-focus-within/select:text-slate-600 transition-colors" />
                       </div>
                       
                       <div className="relative group/input">
-                        <User className="absolute left-2 top-1/2 -translate-y-1/2 w-3 h-3 text-slate-600 group-focus-within/input:text-emerald-500 transition-colors" />
+                        <User className="absolute left-2 top-1/2 -translate-y-1/2 w-3 h-3 text-slate-500 group-focus-within/input:text-slate-600 transition-colors" />
                         <input 
                           type="text"
                           placeholder="Receiver Name"
                           list="receiver-list"
                           value={item.Received_By || ''}
                           onChange={(e) => onReceivedByChange(item.HOF_ID, e.target.value)}
-                          className="bg-slate-950 border border-slate-800 rounded-lg pl-7 pr-2 py-1.5 text-xs text-slate-300 focus:outline-none focus:border-emerald-500/50 w-32 sm:w-40 transition-all"
+                          className={cn("mnc-input-global", "bg-slate-50 border border-slate-200 focus:border-slate-400 focus:bg-white text-slate-900 rounded-md text-xs py-1 pl-6 pr-2.5 transition-all w-28 sm:w-36")}
                         />
                       </div>
                     </div>
@@ -403,10 +458,10 @@ export const DistributionTable = ({
               ))
             ) : (
               <tr>
-                <td colSpan={6} className="px-6 py-12 text-center text-slate-500">
+                <td colSpan={7} className="py-12 text-center text-slate-500 bg-slate-50/50 border-b border-slate-100">
                   <div className="flex flex-col items-center gap-2">
-                    <Search className="w-8 h-8 opacity-20" />
-                    <p>No records found matching your search.</p>
+                    <Search className="w-6 h-6 text-slate-900" />
+                    <p className="text-sm">No records found matching your criteria.</p>
                   </div>
                 </td>
               </tr>
@@ -417,15 +472,15 @@ export const DistributionTable = ({
 
       {/* Pagination Controls */}
       {totalPages > 1 && (
-        <div className="px-6 py-4 border-t border-slate-800 flex items-center justify-between bg-slate-950/20">
-          <p className="text-sm text-slate-500 font-mono">
-            Showing <span className="text-slate-300">{(currentPage - 1) * rowsPerPage + 1}</span> to <span className="text-slate-300">{Math.min(currentPage * rowsPerPage, filteredData.length)}</span> of <span className="text-slate-300">{filteredData.length}</span>
+        <div className="px-6 py-4 border-t border-slate-200 flex items-center justify-between bg-white">
+          <p className="text-xs text-slate-500">
+            Showing <span className="font-medium text-slate-900">{(currentPage - 1) * rowsPerPage + 1}</span> to <span className="font-medium text-slate-900">{Math.min(currentPage * rowsPerPage, filteredData.length)}</span> of <span className="font-medium text-slate-900">{filteredData.length}</span> results
           </p>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5">
             <button
               onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
               disabled={currentPage === 1}
-              className="p-2 rounded-lg border border-slate-800 hover:bg-slate-800 disabled:opacity-30 disabled:hover:bg-transparent transition-all"
+              className="p-1.5 rounded-md border border-slate-200 text-slate-600 hover:bg-slate-50 hover:text-slate-900 disabled:opacity-50 disabled:hover:bg-transparent transition-all"
             >
               <ChevronLeft className="w-4 h-4" />
             </button>
@@ -434,7 +489,7 @@ export const DistributionTable = ({
                 // Show at most 5 page numbers for space efficiency
                 if (totalPages > 5) {
                    if (i + 1 !== 1 && i + 1 !== totalPages && Math.abs(i + 1 - currentPage) > 1) {
-                      if (i + 1 === 2 || i + 1 === totalPages - 1) return <span key={i} className="text-slate-700">...</span>;
+                      if (i + 1 === 2 || i + 1 === totalPages - 1) return <span key={i} className="text-slate-500 text-xs px-1">...</span>;
                       return null;
                    }
                 }
@@ -443,10 +498,10 @@ export const DistributionTable = ({
                     key={i}
                     onClick={() => setCurrentPage(i + 1)}
                     className={cn(
-                      "w-8 h-8 text-xs font-bold rounded-lg transition-all",
+                      "w-7 h-7 text-xs font-medium rounded-md transition-all",
                       currentPage === i + 1 
-                        ? "bg-emerald-600 text-white" 
-                        : "text-slate-500 hover:bg-slate-800 hover:text-slate-300"
+                        ? "bg-slate-900 text-white shadow-sm" 
+                        : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
                     )}
                   >
                     {i + 1}
@@ -457,7 +512,7 @@ export const DistributionTable = ({
             <button
               onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
               disabled={currentPage === totalPages}
-              className="p-2 rounded-lg border border-slate-800 hover:bg-slate-800 disabled:opacity-30 disabled:hover:bg-transparent transition-all"
+              className="p-1.5 rounded-md border border-slate-200 text-slate-600 hover:bg-slate-50 hover:text-slate-900 disabled:opacity-50 disabled:hover:bg-transparent transition-all"
             >
               <ChevronRight className="w-4 h-4" />
             </button>

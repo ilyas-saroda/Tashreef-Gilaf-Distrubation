@@ -8,21 +8,21 @@ export const AnalyticsHeader = ({ analytics }) => {
       title: 'Total Registered',
       value: analytics.total,
       icon: Users,
-      color: 'text-blue-400',
+      color: 'text-blue-600',
       bg: 'bg-blue-400/10',
     },
     {
       title: 'Total Distributed',
       value: analytics.distributed,
       icon: CheckCircle2,
-      color: 'text-emerald-400',
+      color: 'text-emerald-600',
       bg: 'bg-emerald-400/10',
     },
     {
       title: 'Remaining',
       value: analytics.remaining,
       icon: AlertCircle,
-      color: 'text-amber-400',
+      color: 'text-amber-600',
       bg: 'bg-amber-400/10',
     },
   ];
@@ -35,12 +35,12 @@ export const AnalyticsHeader = ({ analytics }) => {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: idx * 0.1 }}
-          className="bg-slate-900 border border-slate-800 p-6 rounded-2xl relative overflow-hidden group"
+          className="mnc-card-global p-6 relative overflow-hidden group"
         >
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-slate-400 mb-1">{card.title}</p>
-              <h4 className="text-3xl font-bold text-white tracking-tight">
+              <p className="text-sm font-medium text-slate-500 mb-1">{card.title}</p>
+              <h4 className="text-3xl font-bold text-slate-900 tracking-tight">
                 {card.value.toLocaleString()}
               </h4>
             </div>

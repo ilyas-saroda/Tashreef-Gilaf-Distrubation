@@ -39,7 +39,7 @@ export function TitleHeader({ appTitle, onChangeTitle }) {
                 if (e.key === "Escape") handleCancelTitle();
               }}
               autoFocus
-              className="bg-slate-900 border-2 border-emerald-500/50 rounded-xl px-4 py-2 text-3xl font-extrabold text-white w-full outline-none focus:border-emerald-500 transition-all shadow-lg shadow-emerald-950/20"
+              className="bg-white border-2 border-emerald-500/50 rounded-xl px-4 py-2 text-3xl font-extrabold text-white w-full outline-none focus:border-emerald-500 transition-all shadow-lg shadow-emerald-950/20"
             />
             <button
               onClick={handleSaveTitle}
@@ -49,7 +49,7 @@ export function TitleHeader({ appTitle, onChangeTitle }) {
             </button>
             <button
               onClick={handleCancelTitle}
-              className="p-3 bg-slate-800 hover:bg-slate-700 text-slate-400 rounded-xl transition-all"
+              className="p-3 bg-white hover:bg-slate-100 text-slate-500 rounded-xl transition-all"
             >
               <X className="w-5 h-5" />
             </button>
@@ -59,7 +59,7 @@ export function TitleHeader({ appTitle, onChangeTitle }) {
             <motion.h2
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
-              className="text-4xl font-extrabold text-white tracking-tight cursor-pointer hover:text-emerald-400 transition-colors"
+              className="text-4xl font-extrabold text-black tracking-tight cursor-pointer transition-colors"
               onClick={() => {
                 setTempTitle(appTitle);
                 setIsEditingTitle(true);
@@ -72,7 +72,7 @@ export function TitleHeader({ appTitle, onChangeTitle }) {
                 setTempTitle(appTitle);
                 setIsEditingTitle(true);
               }}
-              className="p-2 opacity-0 group-hover:opacity-100 bg-slate-800/50 hover:bg-slate-800 text-slate-400 rounded-lg transition-all"
+              className="p-2 opacity-0 group-hover:opacity-100 bg-slate-50 hover:bg-white text-slate-500 rounded-lg transition-all"
             >
               <Edit3 className="w-4 h-4" />
             </button>
@@ -83,7 +83,7 @@ export function TitleHeader({ appTitle, onChangeTitle }) {
         initial={{ opacity: 0, x: -20 }}
         animate={{ opacity: 1, x: 0 }}
         transition={{ delay: 0.1 }}
-        className="text-slate-400 max-w-2xl"
+        className="text-slate-500 max-w-2xl"
       >
         Management and tracking of material distribution across regional centers. 
         Real-time synchronization and analytical oversight.

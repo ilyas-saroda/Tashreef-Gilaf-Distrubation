@@ -1,37 +1,40 @@
 import React from "react";
-import { Edit3, X, Check } from "lucide-react";
-import { motion, AnimatePresence } from "motion/react";
+import { Check } from "lucide-react";
 import { cn } from "../lib/utils";
 
 export default function BulkDistribution({ data, onBulkUpdateSuccess }) {
-  const [isBulkPanelOpen, setIsBulkPanelOpen] = React.useState(false);
   const [bulkAccNoInput, setBulkAccNoInput] = React.useState("");
   const [bulkReceiverName, setBulkReceiverName] = React.useState("");
   const [bulkFeedback, setBulkFeedback] = React.useState(null);
 
-  // Live pre-check warnings for Bulk Distribution
-  const livePreCheckWarnings = React.useMemo(() => {
+  // Live account lookups for Bulk Distribution
+  const liveAccountLookups = React.useMemo(() => {
     if (!bulkAccNoInput || !bulkAccNoInput.trim()) return [];
     
-    const rawIds = bulkAccNoInput
+    const rawIds = Array.from(new Set(bulkAccNoInput
       .split(/[\s,\n]+/)
       .map((s) => s.replace(/[^0-9]/g, "").trim())
-      .filter(Boolean);
+      .filter(Boolean)));
       
     if (rawIds.length === 0) return [];
 
-    const warningsMap = new Map();
-    rawIds.forEach((id) => {
+    return rawIds.map((id) => {
       const item = data.find((d) => String(d.AccNo) === id || String(d.HOF_ID) === id);
-      if (item && item.Status === "Given") {
-        warningsMap.set(item.AccNo, {
+      if (item) {
+        return {
+          id,
+          found: true,
           accNo: item.AccNo,
+          fullName: item.Full_Name,
+          status: item.Status,
           receivedBy: item.Received_By || "Unknown"
-        });
+        };
       }
+      return {
+        id,
+        found: false
+      };
     });
-    
-    return Array.from(warningsMap.values());
   }, [bulkAccNoInput, data]);
 
   const handleBulkDistribution = () => {
@@ -100,96 +103,93 @@ export default function BulkDistribution({ data, onBulkUpdateSuccess }) {
   };
 
   return (
-    <div className="bg-slate-900 border border-slate-800 rounded-lg p-4 shadow-md">
-      <div
-        className="flex justify-between items-center cursor-pointer"
-        onClick={() => setIsBulkPanelOpen(!isBulkPanelOpen)}
-      >
-        <h2 className="text-lg font-bold text-slate-200 flex items-center gap-2">
-          <Edit3 className="w-5 h-5 text-blue-400" />
+    <div className="bg-white border border-slate-200 rounded-xl p-6 shadow-sm w-full max-w-2xl mx-auto mt-4">
+      <div>
+        <h2 className="text-slate-900 font-semibold text-lg tracking-tight mb-1">
           Bulk Distribution Entry
         </h2>
-        <button className="text-slate-400 hover:text-slate-200 transition-colors flex items-center">
-          {isBulkPanelOpen ? <X className="w-5 h-5" /> : <Edit3 className="w-5 h-5" />}
-          <span className="text-xs uppercase tracking-wider font-semibold ml-2">{isBulkPanelOpen ? "Close" : "Open"}</span>
-        </button>
+        <p className="text-xs text-slate-500 mb-4">
+          Process multiple account updates simultaneously
+        </p>
       </div>
 
-      <AnimatePresence>
-        {isBulkPanelOpen && (
-          <motion.div
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: "auto", opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            className="overflow-hidden"
+      <div className="mt-2">
+        {bulkFeedback && (
+          <div
+            className={cn(
+              "mb-4 p-3 rounded-md text-sm font-medium border",
+              bulkFeedback.type === "error"
+                ? "bg-red-50 text-red-700 border-red-200"
+                : bulkFeedback.type === "success"
+                ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                : "bg-amber-50 text-amber-800 border-amber-200"
+            )}
           >
-            <div className="pt-4 border-t border-slate-800 mt-4">
-              {bulkFeedback && (
-                <div
-                  className={cn(
-                    "mb-4 p-3 rounded text-sm font-medium",
-                    bulkFeedback.type === "error"
-                      ? "bg-red-500/10 text-red-400 border border-red-500/20"
-                      : bulkFeedback.type === "success"
-                      ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"
-                      : "bg-amber-500/10 text-amber-400 border border-amber-500/20"
-                  )}
-                >
-                  {bulkFeedback.message}
-                </div>
-              )}
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-slate-400 mb-1">
-                    Account Numbers (comma, space, or line break separated)
-                  </label>
-                  <textarea
-                    value={bulkAccNoInput}
-                    onChange={(e) => setBulkAccNoInput(e.target.value)}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-md p-3 text-slate-200 placeholder-slate-600 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 min-h-[120px] resize-y"
-                    placeholder="e.g. 1024, 1025, 1026"
-                  />
-                  {livePreCheckWarnings.length > 0 && (
-                    <div className="mt-2 p-3 rounded-lg bg-slate-900/60 border border-slate-800 text-slate-400 text-sm space-y-2">
-                      {livePreCheckWarnings.map((w, idx) => (
-                        <div key={idx} className="flex items-center gap-2">
-                          <span className="text-amber-500/80 text-xs">⚠️</span>
-                          <span>
-                            Pre-check Warning: Account <span className="font-medium text-slate-300">{w.accNo}</span> was already collected
-                            <span className="text-emerald-400 font-semibold bg-emerald-500/10 px-2 py-0.5 rounded mx-1">By: {w.receivedBy}</span>
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-                <div className="flex flex-col justify-between">
-                  <div>
-                    <label className="block text-sm font-medium text-slate-400 mb-1">
-                      Bulk Receiver Name
-                    </label>
-                    <input
-                      type="text"
-                      value={bulkReceiverName}
-                      onChange={(e) => setBulkReceiverName(e.target.value)}
-                      className="w-full bg-slate-950 border border-slate-800 rounded-md p-3 text-slate-200 placeholder-slate-600 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-                      placeholder="Name of person collecting"
-                    />
-                  </div>
-                  <button
-                    onClick={handleBulkDistribution}
-                    className="mt-6 w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded transition-all shadow-lg shadow-blue-900/20 flex items-center justify-center gap-2 active:scale-[0.98]"
-                  >
-                    <Check className="w-5 h-5" />
-                    Process Bulk Safe Update
-                  </button>
-                </div>
-              </div>
-            </div>
-          </motion.div>
+            {bulkFeedback.message}
+          </div>
         )}
-      </AnimatePresence>
+
+        <div className="flex flex-col gap-5">
+          <div>
+            <label className="block text-xs font-semibold text-slate-700 mb-1.5 uppercase tracking-wide">
+              Account Numbers
+            </label>
+            <textarea
+              value={bulkAccNoInput}
+              onChange={(e) => setBulkAccNoInput(e.target.value)}
+              className="w-full bg-slate-50 border border-slate-200 text-slate-900 placeholder:text-slate-400 rounded-lg p-3 text-[15px] focus:bg-white focus:border-slate-400 focus:outline-none transition-all min-h-[120px] resize-y"
+              placeholder="e.g. 1024, 1025 (comma or space separated)"
+            />
+            {liveAccountLookups.length > 0 && (
+              <div className="border-l-2 border-slate-300 bg-slate-50/50 p-3 rounded-r-lg mt-2 flex flex-col gap-2">
+                {liveAccountLookups.map((lookup, idx) => (
+                  <div key={idx} className="flex items-start gap-2 text-[15px] text-slate-900">
+                    {lookup.found ? (
+                      <>
+                        <span className="font-mono font-bold text-slate-600 shrink-0 mt-0.5">[{lookup.accNo}]</span>
+                        <span className="font-medium whitespace-normal break-words text-left">
+                          {lookup.fullName}
+                          {lookup.status === 'Given' && (
+                            <span className="inline-flex ml-2 font-medium text-slate-900 bg-slate-100 border border-slate-200 px-1.5 py-0.5 rounded text-xs align-middle">
+                              (Collected by: {lookup.receivedBy})
+                            </span>
+                          )}
+                        </span>
+                      </>
+                    ) : (
+                      <div className="flex items-center gap-2 text-rose-600">
+                        <span className="font-mono font-bold shrink-0">[{lookup.id}]</span>
+                        <span className="font-medium">Account not found in system</span>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+          
+          <div>
+            <label className="block text-xs font-semibold text-slate-700 mb-1.5 uppercase tracking-wide">
+              Bulk Receiver Name
+            </label>
+            <input
+              type="text"
+              value={bulkReceiverName}
+              onChange={(e) => setBulkReceiverName(e.target.value)}
+              className="w-full bg-slate-50 border border-slate-200 text-slate-900 placeholder:text-slate-400 rounded-lg p-3 text-[15px] focus:bg-white focus:border-slate-400 focus:outline-none transition-all"
+              placeholder="Name of person collecting"
+            />
+          </div>
+          
+          <button
+            onClick={handleBulkDistribution}
+            className="w-full bg-slate-900 hover:bg-black text-white font-medium text-sm py-2.5 px-4 rounded-lg shadow-sm transition-colors duration-150 mt-4 flex items-center justify-center gap-2 active:scale-[0.99]"
+          >
+            <Check className="w-4 h-4" />
+            Process Bulk Safe Update
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
