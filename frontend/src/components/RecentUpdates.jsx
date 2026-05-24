@@ -13,7 +13,7 @@ export function RecentUpdates({
   if (recentUpdates.length === 0) return null;
 
   return (
-    <motion.div 
+    <motion.div
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       className="mb-8 p-6 mnc-card-global"
@@ -27,7 +27,7 @@ export function RecentUpdates({
           <div className="text-[11px] text-slate-500 font-mono">
             Last refreshed: {lastRefreshed.toLocaleTimeString()}
           </div>
-          <button 
+          <button
             onClick={onClearAllRecent}
             className="flex items-center gap-1.5 px-3 py-1 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-full text-[10px] uppercase font-bold tracking-widest transition-all border border-rose-200"
           >
@@ -38,21 +38,27 @@ export function RecentUpdates({
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
         {recentUpdates.map((item) => (
-          <div 
-            key={item.HOF_ID} 
+          <div
+            key={item.HOF_ID}
             onClick={() => onCardClick(item.HOF_ID)}
             className="p-4 rounded-xl bg-slate-50 border border-slate-200 group hover:border-emerald-300 hover:shadow-sm transition-all cursor-pointer active:scale-95"
           >
             <div className="flex justify-between items-start mb-1.5">
-              <span className="text-[11px] font-mono text-emerald-600 font-bold">{item.HOF_ID}</span>
+              <span className="text-[11px] font-mono text-emerald-600 font-bold whitespace-normal break-words">
+                {item.HOF_ID}
+              </span>
               <div className="flex items-center gap-1">
-                <span className={cn(
-                  "text-[9px] font-bold px-1.5 py-0.5 rounded border uppercase",
-                  item.Status === 'Given' ? "bg-emerald-50 border-emerald-200 text-emerald-700" : "bg-amber-50 border-amber-200 text-amber-700"
-                )}>
+                <span
+                  className={cn(
+                    "text-[9px] font-bold px-1.5 py-0.5 rounded border uppercase whitespace-normal break-words",
+                    item.Status === 'Given'
+                      ? "bg-emerald-50 border-emerald-200 text-emerald-700"
+                      : "bg-amber-50 border-amber-200 text-amber-700",
+                  )}
+                >
                   {item.Status}
                 </span>
-                <button 
+                <button
                   onClick={(e) => {
                     e.stopPropagation();
                     onDismissRecent(item.HOF_ID);
@@ -64,15 +70,32 @@ export function RecentUpdates({
                 </button>
               </div>
             </div>
-            <p className="text-[15px] leading-tight font-bold text-slate-900 truncate group-hover:text-emerald-600 transition-colors">{item.Full_Name}</p>
-            <div className="flex items-center gap-1.5 mt-1.5 text-[10px] font-mono text-slate-500 truncate">
-              {item.SN && <span>SN: {item.SN}</span>}
+            <p className="text-[15px] leading-tight font-bold text-slate-900 whitespace-normal break-words group-hover:text-emerald-600 transition-colors">
+              {item.Full_Name}
+            </p>
+            <div className="flex items-center flex-wrap gap-1.5 mt-1.5 text-[10px] font-mono text-slate-500 whitespace-normal break-words">
+              {item.SN && (
+                <span className="whitespace-normal break-words">
+                  SN: {item.SN}
+                </span>
+              )}
               {item.SN && item.AccNo && <span>•</span>}
-              {item.AccNo && <span>Acc: {item.AccNo}</span>}
+              {item.AccNo && (
+                <span className="whitespace-normal break-words">
+                  Acc: {item.AccNo}
+                </span>
+              )}
             </div>
-            <div className="flex items-center justify-between mt-2.5 text-[10px] text-slate-500 font-medium">
-              <span>{item.Update_Day?.substring(0,3)} • {item.Update_Time}</span>
-              {item.Received_By && <span className="text-emerald-600 flex items-center gap-1 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-100"><User className="w-2.5 h-2.5" /> {item.Received_By}</span>}
+            <div className="flex items-center justify-between flex-wrap gap-1.5 mt-2.5 text-[10px] text-slate-500 font-medium whitespace-normal break-words">
+              <span className="whitespace-normal break-words">
+                {item.Update_Day?.substring(0, 3)} • {item.Update_Time}
+              </span>
+              {item.Received_By && (
+                <span className="text-emerald-600 flex items-center gap-1 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-100 whitespace-normal break-words">
+                  <User className="w-2.5 h-2.5 shrink-0" />
+                  {item.Received_By}
+                </span>
+              )}
             </div>
           </div>
         ))}
