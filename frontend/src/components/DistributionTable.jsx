@@ -126,33 +126,49 @@ export const DistributionTable = ({
   // Filter logic (runs efficiently)
   const filteredData = React.useMemo(() => {
     const term = searchTerm.toLowerCase().trim();
+    const getAccNoRank = (item) => {
+      if (!term) return 2;
+
+      const accNo = String(item.AccNo ?? '').toLowerCase();
+      if (accNo === term) return 0;
+      if (accNo.startsWith(term)) return 1;
+      return 2;
+    };
     
-    return data.filter(item => {
-      // High-speed short-circuit sequential checker
-      const checkSearch = () => {
-        if (!term) return true;
-        
-        // Step 1: Highest Priority: Account Number matches return true instantly.
-        if (String(item.AccNo ?? '').toLowerCase().includes(term)) return true;
-        
-        // Step 2: Fallback checks executed sequentially
-        if (String(item.Full_Name ?? '').toLowerCase().includes(term)) return true;
-        if (String(item.HOF_ID ?? '').toLowerCase().includes(term)) return true;
-        if (String(item.Status ?? '').toLowerCase().includes(term)) return true;
-        if (String(item.Received_By ?? '').toLowerCase().includes(term)) return true;
-        
-        return false;
-      };
+    return data
+      .filter(item => {
+        // High-speed short-circuit sequential checker
+        const checkSearch = () => {
+          if (!term) return true;
+          
+          // Step 1: Highest Priority: Account Number matches return true instantly.
+          if (String(item.AccNo ?? '').toLowerCase().includes(term)) return true;
+          
+          // Step 2: Fallback checks executed sequentially
+          if (String(item.Full_Name ?? '').toLowerCase().includes(term)) return true;
+          if (String(item.HOF_ID ?? '').toLowerCase().includes(term)) return true;
+          if (String(item.Status ?? '').toLowerCase().includes(term)) return true;
+          if (String(item.Received_By ?? '').toLowerCase().includes(term)) return true;
+          
+          return false;
+        };
 
-      const matchesSearch = checkSearch();
-      const matchesStatus = statusFilter === 'All' || item.Status === statusFilter;
-      const matchesReceiver = receiverFilter === 'All' || 
-        (item.Received_By && item.Received_By.toLowerCase() === receiverFilter.toLowerCase());
-      const matchesDate = dateFilter === 'All' || item.Update_Date === dateFilter;
-      const matchesDay = dayFilter === 'All' || item.Update_Day === dayFilter;
+        const matchesSearch = checkSearch();
+        const matchesStatus = statusFilter === 'All' || item.Status === statusFilter;
+        const matchesReceiver = receiverFilter === 'All' || 
+          (item.Received_By && item.Received_By.toLowerCase() === receiverFilter.toLowerCase());
+        const matchesDate = dateFilter === 'All' || item.Update_Date === dateFilter;
+        const matchesDay = dayFilter === 'All' || item.Update_Day === dayFilter;
 
-      return matchesSearch && matchesStatus && matchesReceiver && matchesDate && matchesDay;
-    });
+        return matchesSearch && matchesStatus && matchesReceiver && matchesDate && matchesDay;
+      })
+      .sort((a, b) => {
+        const rankA = getAccNoRank(a);
+        const rankB = getAccNoRank(b);
+
+        if (rankA !== rankB) return rankA - rankB;
+        return 0;
+      });
   }, [data, searchTerm, statusFilter, receiverFilter, dateFilter, dayFilter]);
 
   // Pagination logic
