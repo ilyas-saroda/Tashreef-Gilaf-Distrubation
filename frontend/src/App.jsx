@@ -30,6 +30,17 @@ import { cn } from "./lib/utils";
 
 export default function App() {
   const [data, setData] = React.useState([]);
+  const accountMap = React.useMemo(() => {
+    const map = new Map();
+    if (Array.isArray(data)) {
+      data.forEach(item => {
+        if (item && item.AccNo) {
+          map.set(String(item.AccNo).trim(), item);
+        }
+      });
+    }
+    return map;
+  }, [data]);
   const [isLoaded, setIsLoaded] = React.useState(false);
   const [showResetModal, setShowResetModal] = React.useState(false);
   const [isSyncing, setIsSyncing] = React.useState(false);
@@ -66,9 +77,7 @@ export default function App() {
 
     const warningsMap = new Map();
     rawIds.forEach((id) => {
-      const item = data.find(
-        (d) => String(d.AccNo) === id || String(d.HOF_ID) === id,
-      );
+      const item = accountMap.get(id);
       if (item && item.Status === "Given") {
         warningsMap.set(item.AccNo, {
           accNo: item.AccNo,
@@ -78,7 +87,7 @@ export default function App() {
     });
 
     return Array.from(warningsMap.values());
-  }, [bulkAccNoInput, data]);
+  }, [bulkAccNoInput, accountMap]);
 
   // Helper helper to push to local Excel companion server
   const saveToLocalExcelFile = async (fullData) => {
@@ -513,30 +522,40 @@ export default function App() {
   const handleBatchSyncState = (successfulUpdates, receiverName) => {
     if (successfulUpdates.length === 0) return;
 
+    const submittedReceiverName = String(receiverName ?? "").trim();
     const timestamps = getTimestampFields();
     const updateIdsSet = new Set(
       successfulUpdates.map((u) => String(u.HOF_ID)),
     );
 
-    const newData = data.map((item) => {
-      if (updateIdsSet.has(String(item.HOF_ID))) {
-        return {
-          ...item,
-          Status: "Given",
-          Received_By: receiverName,
-          ...timestamps,
-        };
-      }
-      return item;
-    });
+    const updateAccNoSet = new Set(
+      successfulUpdates.map((u) => String(u.AccNo).trim()),
+    );
 
-    setData(newData);
-    localStorage.setItem("rumal_distribution_data", JSON.stringify(newData));
+    setData((prev) => {
+      const newData = prev.map((item) => {
+        if (
+          updateIdsSet.has(String(item.HOF_ID)) ||
+          updateAccNoSet.has(String(item.AccNo).trim())
+        ) {
+          return {
+            ...item,
+            Status: "Given",
+            Received_By: submittedReceiverName,
+            ...timestamps,
+          };
+        }
+        return item;
+      });
+
+      localStorage.setItem("rumal_distribution_data", JSON.stringify(newData));
+      return newData;
+    });
 
     successfulUpdates.forEach((item) => {
       updateItemRemote(item.HOF_ID, {
         Status: "Given",
-        Received_By: receiverName,
+        Received_By: submittedReceiverName,
         ...timestamps,
       }).catch((err) => console.error("Bulk sync error for", item.HOF_ID, err));
     });
@@ -740,8 +759,9 @@ export default function App() {
                   {activeTab === "bulk" && (
                     <BulkDistribution
                       data={data}
-                      onBulkUpdateSuccess={(updatedRecords) => {
-                        handleBatchSyncState(updatedRecords);
+                      accountMap={accountMap}
+                      onBulkUpdateSuccess={(updatedRecords, receiverName) => {
+                        handleBatchSyncState(updatedRecords, receiverName);
                       }}
                     />
                   )}

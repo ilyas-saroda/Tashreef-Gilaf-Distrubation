@@ -125,7 +125,7 @@ export const DistributionTable = ({
 
   // Filter logic (runs efficiently)
   const filteredData = React.useMemo(() => {
-    const term = searchTerm.toLowerCase();
+    const term = searchTerm.toLowerCase().trim();
     
     return data.filter(item => {
       // High-speed short-circuit sequential checker
@@ -133,17 +133,13 @@ export const DistributionTable = ({
         if (!term) return true;
         
         // Step 1: Highest Priority: Account Number matches return true instantly.
-        if (item.AccNo !== null && item.AccNo !== undefined && String(item.AccNo).toLowerCase().includes(term)) return true;
+        if (String(item.AccNo ?? '').toLowerCase().includes(term)) return true;
         
         // Step 2: Fallback checks executed sequentially
-        if (item.Full_Name && item.Full_Name.toLowerCase().includes(term)) return true;
-        if (item.HOF_ID !== null && item.HOF_ID !== undefined && String(item.HOF_ID).toLowerCase().includes(term)) return true;
-        if (item.SN !== null && item.SN !== undefined && String(item.SN).toLowerCase().includes(term)) return true;
-        if (item.Status && item.Status.toLowerCase().includes(term)) return true;
-        if (item.Received_By && item.Received_By.toLowerCase().includes(term)) return true;
-        if (item.Update_Date && item.Update_Date.toLowerCase().includes(term)) return true;
-        if (item.Update_Day && item.Update_Day.toLowerCase().includes(term)) return true;
-        if (item.Update_Time && item.Update_Time.toLowerCase().includes(term)) return true;
+        if (String(item.Full_Name ?? '').toLowerCase().includes(term)) return true;
+        if (String(item.HOF_ID ?? '').toLowerCase().includes(term)) return true;
+        if (String(item.Status ?? '').toLowerCase().includes(term)) return true;
+        if (String(item.Received_By ?? '').toLowerCase().includes(term)) return true;
         
         return false;
       };
@@ -198,15 +194,15 @@ export const DistributionTable = ({
 
   const getStatusColor = (status) => {
     switch (status) {
-      case 'Given': return 'bg-emerald-50 text-emerald-700 border-emerald-200';
-      case 'Not Allowed': return 'bg-rose-50 text-rose-700 border-rose-200';
-      case 'Pending': return 'bg-slate-100 text-slate-700 border-slate-200';
-      default: return 'bg-slate-100 text-slate-500 border-slate-200';
+      case 'Given': return 'bg-slate-100 text-slate-900 border-slate-200';
+      case 'Not Allowed': return 'bg-slate-100 text-slate-900 border-slate-200';
+      case 'Pending': return 'bg-slate-100 text-slate-900 border-slate-200';
+      default: return 'bg-slate-100 text-slate-900 border-slate-200';
     }
   };
 
   return (
-    <div className={cn("mnc-card-global", "bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm")}>
+    <div className={cn("mnc-card-global", "bg-white border border-slate-200 rounded-xl shadow-sm")}>
       {/* Suggestions for Receiver Names */}
       <datalist id="receiver-list">
         {filterOptions.receivers.map(([name]) => (
@@ -222,14 +218,14 @@ export const DistributionTable = ({
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
             <input
               type="text"
-              placeholder="Search by HOF ID, Acc No, Name..."
+              placeholder="Search by Acc No, Name, HOF ID..."
               className={cn("mnc-input-global", "w-full bg-slate-50 border border-slate-200 rounded-md py-2 pl-10 pr-4 text-sm text-slate-900 focus:outline-none focus:border-slate-400 focus:bg-white transition-all")}
               value={searchTerm}
               onChange={handleSearchChange}
               onFocus={() => { if (suggestions.length > 0) setShowDropdown(true); }}
             />
             {showDropdown && (
-              <div className="absolute z-50 left-0 right-0 mt-1 bg-white border border-slate-200 rounded-lg shadow-lg overflow-hidden max-h-64 overflow-y-auto">
+              <div className="absolute z-50 left-0 right-0 mt-1 bg-white border border-slate-200 rounded-lg shadow-lg max-h-64 overflow-y-auto">
                 {suggestions.map((item, idx) => (
                   <div
                     key={`${item.HOF_ID}-${idx}`}
@@ -329,9 +325,9 @@ export const DistributionTable = ({
           </div>
 
           {receiverFilter !== 'All' && (
-            <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-100 border border-slate-200 text-[11px] font-medium text-slate-700 max-w-full">
+            <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-100 border border-slate-200 text-[11px] font-bold text-slate-900">
                <User className="w-3.5 h-3.5 shrink-0" />
-               <span className="truncate">Summary for: {receiverFilter}</span>
+               <span className="whitespace-normal break-words">Summary for: {receiverFilter}</span>
             </div>
           )}
         </div>
@@ -360,13 +356,13 @@ export const DistributionTable = ({
         <table className="w-full text-left border-collapse">
           <thead className="bg-slate-50">
             <tr>
-              <th className={cn("mnc-table-th-global", "text-[11px] font-semibold tracking-wider text-slate-500 uppercase py-3.5 px-4 border-b border-slate-200")}>SN</th>
-              <th className={cn("mnc-table-th-global", "text-[11px] font-semibold tracking-wider text-slate-500 uppercase py-3.5 px-4 border-b border-slate-200")}>Acc No</th>
-              <th className={cn("mnc-table-th-global", "text-[11px] font-semibold tracking-wider text-slate-500 uppercase py-3.5 px-4 border-b border-slate-200")}>Full Name</th>
-              <th className={cn("mnc-table-th-global", "text-[11px] font-semibold tracking-wider text-slate-500 uppercase py-3.5 px-4 border-b border-slate-200")}>HOF ID</th>
-              <th className={cn("mnc-table-th-global", "text-[11px] font-semibold tracking-wider text-slate-500 uppercase py-3.5 px-4 border-b border-slate-200")}>Status</th>
-              <th className={cn("mnc-table-th-global", "text-[11px] font-semibold tracking-wider text-slate-500 uppercase py-3.5 px-4 border-b border-slate-200")}>Last Updated</th>
-              <th className={cn("mnc-table-th-global", "text-[11px] font-semibold tracking-wider text-slate-500 uppercase py-3.5 px-4 border-b border-slate-200")}>Action</th>
+              <th className={cn("mnc-table-th-global", "text-[11px] font-bold tracking-wider text-slate-900 uppercase py-3.5 px-4 border-b border-slate-200 whitespace-normal break-words")}>SN</th>
+              <th className={cn("mnc-table-th-global", "text-[11px] font-bold tracking-wider text-slate-900 uppercase py-3.5 px-4 border-b border-slate-200 whitespace-normal break-words")}>Acc No</th>
+              <th className={cn("mnc-table-th-global", "text-[11px] font-bold tracking-wider text-slate-900 uppercase py-3.5 px-4 border-b border-slate-200 whitespace-normal break-words")}>Full Name</th>
+              <th className={cn("mnc-table-th-global", "text-[11px] font-bold tracking-wider text-slate-900 uppercase py-3.5 px-4 border-b border-slate-200 whitespace-normal break-words")}>HOF ID</th>
+              <th className={cn("mnc-table-th-global", "text-[11px] font-bold tracking-wider text-slate-900 uppercase py-3.5 px-4 border-b border-slate-200 whitespace-normal break-words")}>Status</th>
+              <th className={cn("mnc-table-th-global", "text-[11px] font-bold tracking-wider text-slate-900 uppercase py-3.5 px-4 border-b border-slate-200 whitespace-normal break-words")}>Last Updated</th>
+              <th className={cn("mnc-table-th-global", "text-[11px] font-bold tracking-wider text-slate-900 uppercase py-3.5 px-4 border-b border-slate-200 whitespace-normal break-words")}>Action</th>
             </tr>
           </thead>
           <tbody className="bg-white">
@@ -377,40 +373,40 @@ export const DistributionTable = ({
                   id={`hof-row-${item.HOF_ID}`}
                   className="border-b border-slate-100 last:border-b-0 hover:bg-slate-50/60 transition-colors duration-100 group"
                 >
-                  <td className="text-[15px] text-slate-900 font-normal py-3 px-4">{item.SN}</td>
-                  <td className="text-[15px] text-slate-900 font-normal py-3 px-4 font-mono">{item.AccNo}</td>
-                  <td className="text-[15px] text-slate-900 font-normal py-3 px-4">
-                    <span className="font-semibold text-slate-900">
+                  <td className="text-[15px] text-slate-900 font-semibold py-3 px-4 whitespace-normal break-words">{item.SN}</td>
+                  <td className="text-[15px] text-slate-900 font-bold py-3 px-4 font-mono whitespace-normal break-words">{item.AccNo}</td>
+                  <td className="text-[15px] text-slate-900 font-semibold py-3 px-4 whitespace-normal break-words">
+                    <span className="font-bold text-slate-900 whitespace-normal break-words">
                       {item.Full_Name}
                     </span>
                   </td>
-                  <td className="text-[15px] text-slate-900 font-normal py-3 px-4 font-mono text-slate-500">{item.HOF_ID}</td>
-                  <td className="text-[15px] text-slate-900 font-normal py-3 px-4">
+                  <td className="text-[15px] text-slate-900 font-bold py-3 px-4 font-mono whitespace-normal break-words">{item.HOF_ID}</td>
+                  <td className="text-[15px] text-slate-900 font-semibold py-3 px-4 whitespace-normal break-words">
                     <div className="flex flex-col items-start">
                       <span className={cn(
-                        "inline-flex items-center gap-1.5 font-medium text-xs px-2.5 py-0.5 rounded-md border",
+                        "inline-flex items-center gap-1.5 font-bold text-xs px-2.5 py-0.5 rounded-md border whitespace-normal break-words",
                         getStatusColor(item.Status)
                       )}>
                         {item.Status === 'Given' && <CheckCircle2 className="w-4 h-4" />}
                         {item.Status}
                       </span>
                       {item.Received_By && (
-                        <div className="flex items-center gap-1 text-[13px] text-slate-700 font-medium mt-1">
+                        <div className="flex items-center gap-1 text-[13px] text-slate-900 font-bold mt-1 whitespace-normal break-words">
                           <User className="w-3.5 h-3.5" />
-                          <span className="truncate max-w-[140px]" title={item.Received_By}>to {item.Received_By}</span>
+                          <span className="whitespace-normal break-words" title={item.Received_By}>to {item.Received_By}</span>
                         </div>
                       )}
                     </div>
                   </td>
-                  <td className="text-[15px] text-slate-900 font-normal py-3 px-4">
+                  <td className="text-[15px] text-slate-900 font-semibold py-3 px-4 whitespace-normal break-words">
                     {item.Update_Date ? (
                       <div className="flex items-center justify-between gap-2 min-w-[110px]">
                         <div className="flex flex-col gap-0.5">
-                          <div className="flex items-center gap-1 text-[13px] text-slate-900">
-                            <span className="font-medium">{item.Update_Date}</span>
+                          <div className="flex items-center gap-1 text-[13px] text-slate-900 whitespace-normal break-words">
+                            <span className="font-bold whitespace-normal break-words">{item.Update_Date}</span>
                             <span className="text-slate-500">({item.Update_Day?.substring(0, 3)})</span>
                           </div>
-                          <div className="text-[13px] text-slate-500 font-mono">
+                          <div className="text-[13px] text-slate-900 font-mono font-bold whitespace-normal break-words">
                             {item.Update_Time}
                           </div>
                         </div>
@@ -426,7 +422,7 @@ export const DistributionTable = ({
                       <span className="text-[13px] text-slate-500 italic">No updates</span>
                     )}
                   </td>
-                  <td className="text-[15px] text-slate-900 font-normal py-3 px-4">
+                  <td className="text-[15px] text-slate-900 font-semibold py-3 px-4 whitespace-normal break-words">
                     <div className="flex items-center gap-2">
                       <div className="relative group/select">
                         <select
