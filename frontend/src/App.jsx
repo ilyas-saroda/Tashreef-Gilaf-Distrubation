@@ -9,6 +9,7 @@ import { Navbar } from "./components/Navbar";
 import { Footer } from "./components/Footer";
 import { TitleHeader } from "./components/TitleHeader";
 import { DynamicExcelViewer } from "./components/DynamicExcelViewer"; // New Component
+import BulkDistribution from "./components/BulkDistribution";
 import {
   LayoutDashboard,
   FileSpreadsheet,
@@ -45,6 +46,37 @@ export default function App() {
   const [dismissedRecentIds, setDismissedRecentIds] = React.useState(new Set());
   const [dbKeys, setDbKeys] = React.useState([]);
   const [importStats, setImportStats] = React.useState(null);
+  
+  // Bulk Distribution State
+  const [isBulkPanelOpen, setIsBulkPanelOpen] = React.useState(false);
+  const [bulkAccNoInput, setBulkAccNoInput] = React.useState("");
+  const [bulkReceiverName, setBulkReceiverName] = React.useState("");
+  const [bulkFeedback, setBulkFeedback] = React.useState(null);
+
+  // Live pre-check warnings for Bulk Distribution
+  const livePreCheckWarnings = React.useMemo(() => {
+    if (!bulkAccNoInput || !bulkAccNoInput.trim()) return [];
+    
+    const rawIds = bulkAccNoInput
+      .split(/[\s,\n]+/)
+      .map((s) => s.replace(/[^0-9]/g, "").trim())
+      .filter(Boolean);
+      
+    if (rawIds.length === 0) return [];
+
+    const warningsMap = new Map();
+    rawIds.forEach((id) => {
+      const item = data.find((d) => String(d.AccNo) === id || String(d.HOF_ID) === id);
+      if (item && item.Status === "Given") {
+        warningsMap.set(item.AccNo, {
+          accNo: item.AccNo,
+          receivedBy: item.Received_By || "Unknown"
+        });
+      }
+    });
+    
+    return Array.from(warningsMap.values());
+  }, [bulkAccNoInput, data]);
 
   // Helper helper to push to local Excel companion server
   const saveToLocalExcelFile = async (fullData) => {
@@ -63,7 +95,7 @@ export default function App() {
 
   const updateSingleItemLocalExcel = async (hofId, updates) => {
     try {
-      const API_BASE = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000";
+      const API_BASE = import.meta['env'].VITE_API_BASE_URL || "http://localhost:5000";
       await fetch(`${API_BASE}/api/update-item`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -475,6 +507,36 @@ export default function App() {
     setShowResetModal(false);
   };
 
+  const handleBatchSyncState = (successfulUpdates, receiverName) => {
+    if (successfulUpdates.length === 0) return;
+
+    const timestamps = getTimestampFields();
+    const updateIdsSet = new Set(successfulUpdates.map((u) => String(u.HOF_ID)));
+
+    const newData = data.map((item) => {
+      if (updateIdsSet.has(String(item.HOF_ID))) {
+        return {
+          ...item,
+          Status: "Given",
+          Received_By: receiverName,
+          ...timestamps,
+        };
+      }
+      return item;
+    });
+
+    setData(newData);
+    localStorage.setItem("rumal_distribution_data", JSON.stringify(newData));
+
+    successfulUpdates.forEach((item) => {
+      updateItemRemote(item.HOF_ID, {
+        Status: "Given",
+        Received_By: receiverName,
+        ...timestamps,
+      }).catch((err) => console.error("Bulk sync error for", item.HOF_ID, err));
+    });
+  };
+
   const analytics = React.useMemo(
     () => ({
       total: data.length,
@@ -568,6 +630,8 @@ export default function App() {
         onRefresh={handleRefresh}
         onResetClick={() => setShowResetModal(true)}
         showResetButton={data.length > 0 && view === "main"}
+        currentView={view}
+        onViewToggle={setView}
       />
 
       {view === "main" && data.length > 0 && (
@@ -654,9 +718,15 @@ export default function App() {
                   />
 
                   {activeTab === 'register' && (
-                    <DistributionTable
-                      data={data}
-                      onStatusChange={handleStatusChange}
+                    <div className="flex flex-col gap-6 w-full">
+                      <BulkDistribution 
+                        data={data} 
+                        onBulkUpdateSuccess={handleBatchSyncState} 
+                      />
+
+                      <DistributionTable
+                        data={data}
+                        onStatusChange={handleStatusChange}
                       onReceivedByChange={handleReceivedByChange}
                       onClearUpdateInfo={async (id) => {
                         const updated = data.map((item) =>
@@ -683,6 +753,7 @@ export default function App() {
                       onExport={handleExport}
                       onImportNew={() => setShowResetModal(true)}
                     />
+                    </div>
                   )}
                 </>
               )}
