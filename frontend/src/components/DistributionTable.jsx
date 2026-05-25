@@ -12,6 +12,7 @@ import {
   X,
   Clock,
   AlertCircle,
+  ArrowUpDown,
 } from "lucide-react";
 import { cn } from "../lib/utils";
 
@@ -434,9 +435,6 @@ export const DistributionTable = ({
     }
   };
 
-  const selectClass =
-    "bg-white border border-slate-200 text-slate-700 rounded-lg py-2 px-3 text-sm focus:outline-none focus:border-slate-400 focus:text-slate-900 transition-all cursor-pointer appearance-none pr-7 shadow-sm";
-
   return (
     <>
       <style>{`
@@ -453,23 +451,47 @@ export const DistributionTable = ({
         .suggestion-item:hover { background: rgba(0,0,0,0.03); }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: translateY(0); } }
         .dt-dropdown { animation: fadeIn 120ms ease; }
+
+        /* ── Filter section improvements ── */
+        .dt-filter-control { height: 34px; }
+        .dt-filter-divider { width: 1px; height: 20px; background: #e2e8f0; flex-shrink: 0; }
+        .dt-filter-label {
+          font-size: 10px;
+          font-weight: 700;
+          letter-spacing: 0.1em;
+          text-transform: uppercase;
+          color: #94a3b8;
+          white-space: nowrap;
+          line-height: 1;
+        }
+        .dt-filter-group {
+          display: flex;
+          flex-direction: column;
+          gap: 3px;
+        }
+        .dt-filter-group select,
+        .dt-filter-group input {
+          height: 34px;
+        }
+        .dt-search-input {
+          height: 38px;
+          font-size: 13px;
+        }
       `}</style>
 
       <div className="dt-root w-full rounded-2xl overflow-hidden border border-slate-200 bg-white shadow-xl shadow-slate-100">
-        {/* ── Toolbar ── */}
-        <div className="px-5 py-4 border-b border-slate-200 bg-slate-50/50 space-y-3.5">
-          {/* Row 1: Search + Filters */}
-          <div className="flex flex-col lg:flex-row gap-3 items-start lg:items-center">
-            {/* Search */}
-            <div
-              className="relative w-full lg:max-w-72"
-              ref={searchContainerRef}
-            >
+        {/* ══════════════════════════════════════════
+            TOOLBAR — REDESIGNED FILTER SECTION
+        ══════════════════════════════════════════ */}
+        <div className="px-5 pt-4 pb-3.5 border-b border-slate-200 bg-slate-50/50">
+          {/* ── Row 1: Search bar (full width) ── */}
+          <div className="flex items-center gap-3 mb-3">
+            <div className="relative flex-1 max-w-sm" ref={searchContainerRef}>
               <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
               <input
                 type="text"
-                placeholder="Acc No · Full Name · HOF ID"
-                className="w-full bg-white border border-slate-200 rounded-lg py-2 pl-10 pr-4 text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none focus:border-slate-400 focus:text-slate-900 transition-all font-sans tracking-wide shadow-sm"
+                placeholder="Search by Acc No · Full Name · HOF ID"
+                className="dt-search-input w-full bg-white border border-slate-200 rounded-lg py-2 pl-10 pr-4 text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none focus:border-slate-400 focus:text-slate-900 transition-all font-sans tracking-wide shadow-sm"
                 value={searchTerm}
                 onChange={handleSearchChange}
                 onFocus={() => {
@@ -499,17 +521,45 @@ export const DistributionTable = ({
               )}
             </div>
 
-            {/* Filter Controls */}
-            <div className="flex items-center flex-wrap gap-2 w-full lg:w-auto">
-              <Filter className="w-3.5 h-3.5 text-slate-400 hidden sm:block shrink-0" />
+            {/* Action Buttons — right-aligned in the search row */}
+            <div className="flex items-center gap-2 ml-auto shrink-0">
+              <button
+                onClick={onImportNew}
+                className="flex items-center gap-2 px-4 py-2 bg-white text-slate-600 hover:text-slate-900 border border-slate-200 hover:border-slate-300 hover:bg-slate-50 text-sm font-semibold rounded-lg transition-all shadow-sm h-[38px]"
+              >
+                <FileSpreadsheet className="w-4 h-4 text-slate-500" />
+                New Import
+              </button>
+              <button
+                onClick={() => onExport(filteredData)}
+                className="flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-semibold rounded-lg transition-all shadow-md shadow-emerald-100 h-[38px]"
+              >
+                <Download className="w-4 h-4" />
+                Export Excel
+              </button>
+            </div>
+          </div>
 
-              <div className="dt-select-wrap flex-1 sm:flex-none">
+          {/* ── Row 2: Filter strip ── */}
+          <div className="flex items-end gap-2 flex-wrap">
+            {/* Filter icon label */}
+            <div className="flex items-center gap-1.5 pb-0.5 shrink-0 self-end mb-[7px]">
+              <Filter className="w-3.5 h-3.5 text-slate-400" />
+              <span className="dt-filter-label">Filters</span>
+            </div>
+
+            <div className="dt-filter-divider self-end mb-[7px]" />
+
+            {/* Status */}
+            <div className="dt-filter-group">
+              <span className="dt-filter-label pl-0.5">Status</span>
+              <div className="dt-select-wrap">
                 <select
                   value={statusFilter}
                   onChange={(e) => setStatusFilter(e.target.value)}
-                  className={cn(selectClass, "min-w-[130px] w-full")}
+                  className={cn(selectClass, "min-w-[148px]")}
                 >
-                  <option value="All">All Status ({data.length})</option>
+                  <option value="All">All ({data.length})</option>
                   <option value="Pending">
                     Pending ({filterOptions.statuses.Pending})
                   </option>
@@ -521,12 +571,16 @@ export const DistributionTable = ({
                   </option>
                 </select>
               </div>
+            </div>
 
-              <div className="dt-select-wrap flex-1 sm:flex-none">
+            {/* Date */}
+            <div className="dt-filter-group">
+              <span className="dt-filter-label pl-0.5">Date</span>
+              <div className="dt-select-wrap">
                 <select
                   value={dateFilter}
                   onChange={(e) => setDateFilter(e.target.value)}
-                  className={cn(selectClass, "min-w-[110px] w-full")}
+                  className={cn(selectClass, "min-w-[120px]")}
                 >
                   <option value="All">All Dates</option>
                   {filterOptions.dates.map(([date, count]) => (
@@ -536,12 +590,16 @@ export const DistributionTable = ({
                   ))}
                 </select>
               </div>
+            </div>
 
-              <div className="dt-select-wrap flex-1 sm:flex-none">
+            {/* Day */}
+            <div className="dt-filter-group">
+              <span className="dt-filter-label pl-0.5">Day</span>
+              <div className="dt-select-wrap">
                 <select
                   value={dayFilter}
                   onChange={(e) => setDayFilter(e.target.value)}
-                  className={cn(selectClass, "min-w-[100px] w-full")}
+                  className={cn(selectClass, "min-w-[110px]")}
                 >
                   <option value="All">All Days</option>
                   {filterOptions.days.map(([day, count]) => (
@@ -551,44 +609,71 @@ export const DistributionTable = ({
                   ))}
                 </select>
               </div>
+            </div>
 
-              <div className="flex-1 sm:flex-none">
-                <select
-                  value={getSortOptionValue(sortField, sortDirection)}
-                  onChange={(e) => handleSortOptionChange(e.target.value)}
-                  className="bg-slate-950 border border-slate-800 rounded-lg py-2 px-3 text-sm text-slate-200 focus:outline-none focus:border-slate-600 transition-all min-w-[150px] w-full"
-                >
-                  <option value="default">Default (SN Low to High)</option>
-                  <option value="sn-desc">SN (High to Low)</option>
-                  <option value="acc-asc">Acc No (Low to High)</option>
-                  <option value="acc-desc">Acc No (High to Low)</option>
-                  <option value="updated-newest">
-                    Recently Updated (Newest First)
-                  </option>
-                  <option value="updated-oldest">
-                    Oldest Updated (Oldest First)
-                  </option>
-                </select>
-              </div>
-
+            {/* Receiver */}
+            <div className="dt-filter-group">
+              <span className="dt-filter-label pl-0.5">Receiver</span>
               <datalist id="receiver-list-dt">
                 {filterOptions.receivers.map(([name]) => (
                   <option key={name} value={name} />
                 ))}
               </datalist>
-              <div className="relative flex-1 sm:flex-none">
+              <div className="relative">
                 <User className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400 pointer-events-none" />
                 <input
                   type="text"
                   list="receiver-list-dt"
-                  placeholder="By Receiver..."
+                  placeholder="Any receiver"
                   value={receiverFilter === "All" ? "" : receiverFilter}
                   onChange={(e) => setReceiverFilter(e.target.value || "All")}
-                  className="bg-white border border-slate-200 rounded-lg py-2 pl-9 pr-3 text-sm text-slate-700 placeholder:text-slate-400 focus:outline-none focus:border-slate-400 focus:text-slate-900 transition-all w-full sm:w-36 font-sans tracking-wide shadow-sm"
+                  className="bg-white border border-slate-200 rounded-lg py-2 pl-9 pr-3 text-sm text-slate-700 placeholder:text-slate-400 focus:outline-none focus:border-slate-400 focus:text-slate-900 transition-all w-36 font-sans tracking-wide shadow-sm"
                 />
               </div>
+            </div>
 
-              {hasActiveFilters && (
+            <div className="dt-filter-divider self-end mb-[7px]" />
+
+            {/* Sort */}
+            <div className="dt-filter-group">
+              <span className="dt-filter-label pl-0.5">Sort by</span>
+              <div className="relative flex items-center">
+                <ArrowUpDown className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400 pointer-events-none z-10" />
+                <select
+                  value={getSortOptionValue(sortField, sortDirection)}
+                  onChange={(e) => handleSortOptionChange(e.target.value)}
+                  className="bg-slate-950 border border-slate-800 rounded-lg py-2 pl-9 pr-8 text-sm text-slate-200 focus:outline-none focus:border-slate-600 transition-all min-w-[185px] appearance-none cursor-pointer"
+                  style={{ backgroundImage: "none" }}
+                >
+                  <option value="default">SN — Low to High</option>
+                  <option value="sn-desc">SN — High to Low</option>
+                  <option value="acc-asc">Acc No — Low to High</option>
+                  <option value="acc-desc">Acc No — High to Low</option>
+                  <option value="updated-newest">Updated — Newest First</option>
+                  <option value="updated-oldest">Updated — Oldest First</option>
+                </select>
+                {/* Custom chevron for the dark select */}
+                <span className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none">
+                  <svg width="10" height="6" viewBox="0 0 10 6" fill="none">
+                    <path
+                      d="M1 1l4 4 4-4"
+                      stroke="#94a3b8"
+                      strokeWidth="1.5"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </svg>
+                </span>
+              </div>
+            </div>
+
+            {/* Reset — only when filters are active */}
+            {hasActiveFilters && (
+              <div className="dt-filter-group justify-end">
+                {/* Invisible label to keep vertical alignment */}
+                <span className="dt-filter-label opacity-0 select-none">
+                  Reset
+                </span>
                 <button
                   onClick={() => {
                     setSearchTerm("");
@@ -599,74 +684,52 @@ export const DistributionTable = ({
                     setSortField("SN");
                     setSortDirection("asc");
                   }}
-                  className="flex items-center gap-1.5 px-3.5 py-2 bg-slate-100 text-slate-600 hover:text-slate-900 border border-slate-200 hover:border-slate-300 hover:bg-slate-200 rounded-lg text-xs font-bold tracking-widest uppercase transition-all shadow-sm cursor-pointer whitespace-nowrap"
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 text-slate-600 hover:text-slate-900 border border-slate-200 hover:border-slate-300 hover:bg-slate-200 rounded-lg text-xs font-bold tracking-widest uppercase transition-all shadow-sm cursor-pointer whitespace-nowrap h-[34px]"
                 >
                   <X className="w-3.5 h-3.5" />
-                  Reset Filters
+                  Reset
                 </button>
-              )}
-            </div>
+              </div>
+            )}
           </div>
 
-          {/* Row 2: Stats + Action Buttons */}
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-            {/* Stats Pills */}
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="dt-stat-pill bg-slate-100 text-slate-600 border border-slate-200">
-                <span className="w-1.5 h-1.5 rounded-full bg-blue-500 inline-block"></span>
-                Found{" "}
-                <span className="text-slate-900 ml-1">
-                  {filteredStats.total}
-                </span>
+          {/* ── Row 3: Stats pills ── */}
+          <div className="flex flex-wrap items-center gap-2 mt-3 pt-3 border-t border-slate-200/80">
+            <span className="dt-stat-pill bg-slate-100 text-slate-600 border border-slate-200">
+              <span className="w-1.5 h-1.5 rounded-full bg-blue-500 inline-block"></span>
+              Found{" "}
+              <span className="text-slate-900 ml-1">{filteredStats.total}</span>
+            </span>
+            <span className="dt-stat-pill bg-emerald-50 text-emerald-700 border border-emerald-100">
+              <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+              Given{" "}
+              <span className="text-emerald-800 ml-1">
+                {filteredStats.given}
               </span>
-              <span className="dt-stat-pill bg-emerald-50 text-emerald-700 border border-emerald-100">
-                <CheckCircle2 className="w-3 h-3 text-emerald-600" />
-                Given{" "}
-                <span className="text-emerald-800 ml-1">
-                  {filteredStats.given}
-                </span>
+            </span>
+            <span className="dt-stat-pill bg-amber-50 text-amber-700 border border-amber-100">
+              <Clock className="w-3 h-3 text-amber-600" />
+              Pending{" "}
+              <span className="text-amber-800 ml-1">
+                {filteredStats.pending}
               </span>
-              <span className="dt-stat-pill bg-amber-50 text-amber-700 border border-amber-100">
-                <Clock className="w-3 h-3 text-amber-600" />
-                Pending{" "}
-                <span className="text-amber-800 ml-1">
-                  {filteredStats.pending}
-                </span>
+            </span>
+            <span className="dt-stat-pill bg-rose-50 text-rose-700 border border-rose-100">
+              <AlertCircle className="w-3 h-3 text-rose-600" />
+              Blocked{" "}
+              <span className="text-rose-800 ml-1">
+                {filteredStats.blocked}
               </span>
-              <span className="dt-stat-pill bg-rose-50 text-rose-700 border border-rose-100">
-                <AlertCircle className="w-3 h-3 text-rose-600" />
-                Blocked{" "}
-                <span className="text-rose-800 ml-1">
-                  {filteredStats.blocked}
-                </span>
+            </span>
+            {receiverFilter !== "All" && (
+              <span className="dt-stat-pill bg-violet-50 text-violet-700 border border-violet-100">
+                <User className="w-3 h-3 text-violet-600" />
+                {receiverFilter}
               </span>
-              {receiverFilter !== "All" && (
-                <span className="dt-stat-pill bg-violet-50 text-violet-700 border border-violet-100">
-                  <User className="w-3 h-3 text-violet-600" />
-                  {receiverFilter}
-                </span>
-              )}
-            </div>
-
-            {/* Action Buttons */}
-            <div className="flex items-center gap-2 shrink-0">
-              <button
-                onClick={onImportNew}
-                className="flex items-center gap-2 px-4 py-2 bg-white text-slate-600 hover:text-slate-900 border border-slate-200 hover:border-slate-300 hover:bg-slate-50 text-sm font-semibold rounded-lg transition-all shadow-sm"
-              >
-                <FileSpreadsheet className="w-4 h-4 text-slate-500" />
-                New Import
-              </button>
-              <button
-                onClick={() => onExport(filteredData)}
-                className="flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-semibold rounded-lg transition-all shadow-md shadow-emerald-100"
-              >
-                <Download className="w-4 h-4" />
-                Export Excel
-              </button>
-            </div>
+            )}
           </div>
         </div>
+        {/* ══ END TOOLBAR ══ */}
 
         {/* ── Table ── */}
         <div className="w-full overflow-x-auto">
