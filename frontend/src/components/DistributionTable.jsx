@@ -28,6 +28,109 @@ const getAccNoRank = (item, term) => {
   return 2;
 };
 
+const getNumericValue = (value) => {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : null;
+};
+
+const compareNumericValues = (aValue, bValue, direction) => {
+  const aNumber = getNumericValue(aValue);
+  const bNumber = getNumericValue(bValue);
+  if (aNumber === null && bNumber === null) return 0;
+  if (aNumber === null) return 1;
+  if (bNumber === null) return -1;
+  return direction === "asc" ? aNumber - bNumber : bNumber - aNumber;
+};
+
+const getUpdateTimestamp = (item) => {
+  if (!item.Update_Date) return null;
+
+  const [day, month, year] = String(item.Update_Date).split("/").map(Number);
+  if (!day || !month || !year) return null;
+
+  const [hour = 0, minute = 0, second = 0] = String(item.Update_Time ?? "")
+    .split(":")
+    .map(Number);
+  const timestamp = new Date(
+    year,
+    month - 1,
+    day,
+    Number.isFinite(hour) ? hour : 0,
+    Number.isFinite(minute) ? minute : 0,
+    Number.isFinite(second) ? second : 0,
+  ).getTime();
+
+  return Number.isFinite(timestamp) ? timestamp : null;
+};
+
+const compareNullableTimestamps = (a, b, direction) => {
+  const aTime = getUpdateTimestamp(a);
+  const bTime = getUpdateTimestamp(b);
+  if (aTime === null && bTime === null) return 0;
+  if (aTime === null) return 1;
+  if (bTime === null) return -1;
+  return direction === "asc" ? aTime - bTime : bTime - aTime;
+};
+
+const compareBySortField = (a, b, field, direction) => {
+  const multiplier = direction === "asc" ? 1 : -1;
+
+  switch (field) {
+    case "AccNo":
+      return compareNumericValues(a.AccNo, b.AccNo, direction);
+    case "HOF_ID":
+      return compareNumericValues(a.HOF_ID, b.HOF_ID, direction);
+    case "Full_Name":
+      return String(a.Full_Name ?? "").localeCompare(
+        String(b.Full_Name ?? ""),
+      ) * multiplier;
+    case "Status":
+      return String(a.Status ?? "").localeCompare(String(b.Status ?? "")) * multiplier;
+    case "LastUpdated":
+      return compareNullableTimestamps(a, b, direction);
+    case "SN":
+    default:
+      return compareNumericValues(a.SN, b.SN, direction);
+  }
+};
+
+const getSortOptionValue = (field, direction) => {
+  if (field === "SN" && direction === "asc") return "default";
+  if (field === "SN" && direction === "desc") return "sn-desc";
+  if (field === "AccNo" && direction === "asc") return "acc-asc";
+  if (field === "AccNo" && direction === "desc") return "acc-desc";
+  if (field === "LastUpdated" && direction === "desc") return "updated-newest";
+  if (field === "LastUpdated" && direction === "asc") return "updated-oldest";
+  return `${field}:${direction}`;
+};
+
+const getSortOptionState = (value) => {
+  switch (value) {
+    case "sn-desc":
+      return { field: "SN", direction: "desc" };
+    case "acc-asc":
+      return { field: "AccNo", direction: "asc" };
+    case "acc-desc":
+      return { field: "AccNo", direction: "desc" };
+    case "updated-newest":
+      return { field: "LastUpdated", direction: "desc" };
+    case "updated-oldest":
+      return { field: "LastUpdated", direction: "asc" };
+    case "default":
+    default:
+      return { field: "SN", direction: "asc" };
+  }
+};
+
+const sortableHeaders = [
+  { label: "SN", field: "SN" },
+  { label: "Acc No", field: "AccNo" },
+  { label: "Full Name", field: "Full_Name" },
+  { label: "HOF ID", field: "HOF_ID" },
+  { label: "Status", field: "Status" },
+  { label: "Last Updated", field: "LastUpdated" },
+];
+
 const matchesSearchTerm = (item, term) => {
   if (!term) return true;
   if (String(item.AccNo ?? "").toLowerCase().includes(term)) return true;
@@ -76,12 +179,15 @@ export const DistributionTable = ({
   onClearUpdateInfo,
   onExport,
   onImportNew,
+  statusFilterPreset = "All",
 }) => {
   const [searchTerm, setSearchTerm] = React.useState("");
-  const [statusFilter, setStatusFilter] = React.useState("All");
+  const [statusFilter, setStatusFilter] = React.useState(statusFilterPreset);
   const [receiverFilter, setReceiverFilter] = React.useState("All");
   const [dateFilter, setDateFilter] = React.useState("All");
   const [dayFilter, setDayFilter] = React.useState("All");
+  const [sortField, setSortField] = React.useState("SN");
+  const [sortDirection, setSortDirection] = React.useState("asc");
   const [currentPage, setCurrentPage] = React.useState(1);
 
   const [showDropdown, setShowDropdown] = React.useState(false);
@@ -117,6 +223,26 @@ export const DistributionTable = ({
     setSearchTerm(value);
     setShowDropdown(value.trim().length > 0);
   };
+
+  const handleHeaderClick = (field) => {
+    if (sortField === field) {
+      setSortDirection(sortDirection === "asc" ? "desc" : "asc");
+      return;
+    }
+
+    setSortField(field);
+    setSortDirection("asc");
+  };
+
+  const handleSortOptionChange = (value) => {
+    const nextSort = getSortOptionState(value);
+    setSortField(nextSort.field);
+    setSortDirection(nextSort.direction);
+  };
+
+  React.useEffect(() => {
+    setStatusFilter(statusFilterPreset);
+  }, [statusFilterPreset]);
 
   const filterOptions = React.useMemo(() => {
     const receivers = new Map();
@@ -170,12 +296,14 @@ export const DistributionTable = ({
       result.push(item);
     }
 
-    if (!term) return result;
-
     return result.sort((a, b) => {
-      const rankA = getAccNoRank(a, term);
-      const rankB = getAccNoRank(b, term);
-      return rankA - rankB;
+      if (term) {
+        const rankA = getAccNoRank(a, term);
+        const rankB = getAccNoRank(b, term);
+        if (rankA !== rankB) return rankA - rankB;
+      }
+
+      return compareBySortField(a, b, sortField, sortDirection);
     });
   }, [
     data,
@@ -184,6 +312,8 @@ export const DistributionTable = ({
     receiverFilter,
     dateFilter,
     dayFilter,
+    sortField,
+    sortDirection,
   ]);
 
   const totalPages = Math.ceil(filteredData.length / ROWS_PER_PAGE);
@@ -204,7 +334,15 @@ export const DistributionTable = ({
 
   React.useEffect(() => {
     setCurrentPage(1);
-  }, [searchTerm, statusFilter, receiverFilter, dateFilter, dayFilter]);
+  }, [
+    searchTerm,
+    statusFilter,
+    receiverFilter,
+    dateFilter,
+    dayFilter,
+    sortField,
+    sortDirection,
+  ]);
 
   React.useEffect(() => {
     const handleJump = (event) => {
@@ -234,7 +372,9 @@ export const DistributionTable = ({
     statusFilter !== "All" ||
     receiverFilter !== "All" ||
     dateFilter !== "All" ||
-    dayFilter !== "All";
+    dayFilter !== "All" ||
+    sortField !== "SN" ||
+    sortDirection !== "asc";
 
   const getStatusBadge = (status) => {
     switch (status) {
@@ -381,6 +521,25 @@ export const DistributionTable = ({
                 </select>
               </div>
 
+              <div className="flex-1 sm:flex-none">
+                <select
+                  value={getSortOptionValue(sortField, sortDirection)}
+                  onChange={(e) => handleSortOptionChange(e.target.value)}
+                  className="bg-slate-950 border border-slate-800 rounded-lg py-2 px-3 text-sm text-slate-200 focus:outline-none focus:border-slate-600 transition-all min-w-[150px] w-full"
+                >
+                  <option value="default">Default (SN Low to High)</option>
+                  <option value="sn-desc">SN (High to Low)</option>
+                  <option value="acc-asc">Acc No (Low to High)</option>
+                  <option value="acc-desc">Acc No (High to Low)</option>
+                  <option value="updated-newest">
+                    Recently Updated (Newest First)
+                  </option>
+                  <option value="updated-oldest">
+                    Oldest Updated (Oldest First)
+                  </option>
+                </select>
+              </div>
+
               <datalist id="receiver-list-dt">
                 {filterOptions.receivers.map(([name]) => (
                   <option key={name} value={name} />
@@ -406,6 +565,8 @@ export const DistributionTable = ({
                     setReceiverFilter("All");
                     setDateFilter("All");
                     setDayFilter("All");
+                    setSortField("SN");
+                    setSortDirection("asc");
                   }}
                   className="flex items-center gap-1.5 px-3.5 py-2 bg-slate-100 text-slate-600 hover:text-slate-900 border border-slate-200 hover:border-slate-300 hover:bg-slate-200 rounded-lg text-xs font-bold tracking-widest uppercase transition-all shadow-sm cursor-pointer whitespace-nowrap"
                 >
@@ -481,22 +642,25 @@ export const DistributionTable = ({
           <table className="dt-table w-full text-left border-collapse">
             <thead>
               <tr className="border-b border-slate-200 bg-slate-50">
-                {[
-                  "SN",
-                  "Acc No",
-                  "Full Name",
-                  "HOF ID",
-                  "Status",
-                  "Last Updated",
-                  "Action",
-                ].map((h) => (
+                {sortableHeaders.map((header) => (
                   <th
-                    key={h}
-                    className="py-3.5 px-4 text-[11px] font-bold tracking-[0.12em] uppercase text-slate-500 whitespace-nowrap"
+                    key={header.field}
+                    onClick={() => handleHeaderClick(header.field)}
+                    className="py-3.5 px-4 text-[11px] font-bold tracking-[0.12em] uppercase text-slate-500 whitespace-nowrap cursor-pointer select-none hover:bg-slate-800/80 transition-colors"
                   >
-                    {h}
+                    <span className="inline-flex items-center gap-1.5">
+                      {header.label}
+                      {sortField === header.field && (
+                        <span className="text-slate-900">
+                          {sortDirection === "asc" ? "▲" : "▼"}
+                        </span>
+                      )}
+                    </span>
                   </th>
                 ))}
+                <th className="py-3.5 px-4 text-[11px] font-bold tracking-[0.12em] uppercase text-slate-500 whitespace-nowrap">
+                  Action
+                </th>
               </tr>
             </thead>
             <tbody>

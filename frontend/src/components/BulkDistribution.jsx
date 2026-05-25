@@ -90,7 +90,9 @@ export default function BulkDistribution({
 
     const feedbackParts = [];
     if (successfulUpdates.length > 0) {
-      feedbackParts.push(`Success: Processed ${successfulUpdates.length} records.`);
+      feedbackParts.push(
+        `Success: Processed ${successfulUpdates.length} records.`,
+      );
     }
     if (alreadyDistributed.length > 0) {
       const formattedAlready = alreadyDistributed.map(

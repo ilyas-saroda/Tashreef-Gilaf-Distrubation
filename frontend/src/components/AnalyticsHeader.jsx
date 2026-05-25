@@ -2,7 +2,7 @@ import React from 'react';
 import { Users, CheckCircle2, AlertCircle } from 'lucide-react';
 import { motion } from 'motion/react';
 
-export const AnalyticsHeader = ({ analytics }) => {
+export const AnalyticsHeader = ({ analytics, onCardClick }) => {
   const cards = [
     {
       title: 'Total Registered',
@@ -10,6 +10,7 @@ export const AnalyticsHeader = ({ analytics }) => {
       icon: Users,
       color: 'text-blue-600',
       bg: 'bg-blue-400/10',
+      filter: 'All',
     },
     {
       title: 'Total Distributed',
@@ -17,13 +18,15 @@ export const AnalyticsHeader = ({ analytics }) => {
       icon: CheckCircle2,
       color: 'text-emerald-600',
       bg: 'bg-emerald-400/10',
+      filter: 'Given',
     },
     {
-      title: 'Remaining',
-      value: analytics.remaining,
+      title: 'Pending',
+      value: analytics.pending ?? analytics.remaining,
       icon: AlertCircle,
       color: 'text-amber-600',
       bg: 'bg-amber-400/10',
+      filter: 'Pending',
     },
   ];
 
@@ -35,7 +38,8 @@ export const AnalyticsHeader = ({ analytics }) => {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: idx * 0.1 }}
-          className="mnc-card-global p-6 relative overflow-hidden group"
+          onClick={() => onCardClick?.(card.filter)}
+          className="mnc-card-global p-6 relative overflow-hidden group cursor-pointer hover:scale-[1.01] hover:border-slate-700 transition-all duration-150"
         >
           <div className="flex items-center justify-between">
             <div>

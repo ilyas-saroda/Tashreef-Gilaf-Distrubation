@@ -48,6 +48,8 @@ export default function App() {
   const [errorMessage, setErrorMessage] = React.useState(null);
   const [view, setView] = React.useState("main"); // Fixed the ReferenceError!
   const [activeTab, setActiveTab] = React.useState("register");
+  const [dashboardStatusFilter, setDashboardStatusFilter] =
+    React.useState("All");
   const [appTitle, setAppTitle] = React.useState(
     () =>
       localStorage.getItem("app_distribution_title") ||
@@ -187,6 +189,11 @@ export default function App() {
         }),
       );
     }, 100);
+  };
+
+  const handleAnalyticsCardClick = (statusType) => {
+    setDashboardStatusFilter(statusType);
+    setActiveTab("register");
   };
 
   // Helper to map App updates to Supabase columns using detected schema
@@ -565,6 +572,7 @@ export default function App() {
     () => ({
       total: data.length,
       distributed: data.filter((item) => item.Status === "Given").length,
+      pending: data.filter((item) => item.Status === "Pending").length,
       remaining: data.filter(
         (item) => item.Status === "Pending" || item.Status === "Not Allowed",
       ).length,
@@ -732,7 +740,10 @@ export default function App() {
                 <>
                   {activeTab === "dashboard" && (
                     <>
-                      <AnalyticsHeader analytics={analytics} />
+                      <AnalyticsHeader
+                        analytics={analytics}
+                        onCardClick={handleAnalyticsCardClick}
+                      />
                       <RecentUpdates
                         recentUpdates={recentUpdates}
                         lastRefreshed={lastRefreshed}
@@ -770,6 +781,7 @@ export default function App() {
                     <div className="flex flex-col gap-6 w-full">
                       <DistributionTable
                         data={data}
+                        statusFilterPreset={dashboardStatusFilter}
                         onStatusChange={handleStatusChange}
                         onReceivedByChange={handleReceivedByChange}
                         onClearUpdateInfo={async (id) => {
