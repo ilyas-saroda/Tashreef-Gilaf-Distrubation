@@ -81,11 +81,15 @@ const compareBySortField = (a, b, field, direction) => {
     case "HOF_ID":
       return compareNumericValues(a.HOF_ID, b.HOF_ID, direction);
     case "Full_Name":
-      return String(a.Full_Name ?? "").localeCompare(
-        String(b.Full_Name ?? ""),
-      ) * multiplier;
+      return (
+        String(a.Full_Name ?? "").localeCompare(String(b.Full_Name ?? "")) *
+        multiplier
+      );
     case "Status":
-      return String(a.Status ?? "").localeCompare(String(b.Status ?? "")) * multiplier;
+      return (
+        String(a.Status ?? "").localeCompare(String(b.Status ?? "")) *
+        multiplier
+      );
     case "LastUpdated":
       return compareNullableTimestamps(a, b, direction);
     case "SN":
@@ -133,11 +137,33 @@ const sortableHeaders = [
 
 const matchesSearchTerm = (item, term) => {
   if (!term) return true;
-  if (String(item.AccNo ?? "").toLowerCase().includes(term)) return true;
-  if (String(item.Full_Name ?? "").toLowerCase().includes(term)) return true;
-  if (String(item.HOF_ID ?? "").toLowerCase().includes(term)) return true;
-  if (String(item.Status ?? "").toLowerCase().includes(term)) return true;
-  return String(item.Received_By ?? "").toLowerCase().includes(term);
+  if (
+    String(item.AccNo ?? "")
+      .toLowerCase()
+      .includes(term)
+  )
+    return true;
+  if (
+    String(item.Full_Name ?? "")
+      .toLowerCase()
+      .includes(term)
+  )
+    return true;
+  if (
+    String(item.HOF_ID ?? "")
+      .toLowerCase()
+      .includes(term)
+  )
+    return true;
+  if (
+    String(item.Status ?? "")
+      .toLowerCase()
+      .includes(term)
+  )
+    return true;
+  return String(item.Received_By ?? "")
+    .toLowerCase()
+    .includes(term);
 };
 
 const getSuggestions = (data, term) => {
@@ -323,7 +349,12 @@ export const DistributionTable = ({
   }, [filteredData, currentPage]);
 
   const filteredStats = React.useMemo(() => {
-    const stats = { total: filteredData.length, given: 0, pending: 0, blocked: 0 };
+    const stats = {
+      total: filteredData.length,
+      given: 0,
+      pending: 0,
+      blocked: 0,
+    };
     for (const item of filteredData) {
       if (item.Status === "Given") stats.given += 1;
       else if (item.Status === "Pending") stats.pending += 1;
