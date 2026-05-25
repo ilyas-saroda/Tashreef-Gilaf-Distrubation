@@ -14,7 +14,60 @@ import {
   AlertCircle,
 } from "lucide-react";
 import { cn } from "../lib/utils";
-import * as XLSX from "xlsx";
+
+const ROWS_PER_PAGE = 15;
+const STATUS_COUNTS = { Pending: 0, Given: 0, "Not Allowed": 0 };
+
+const selectClass =
+  "bg-white border border-slate-200 text-slate-700 rounded-lg py-2 px-3 text-sm focus:outline-none focus:border-slate-400 focus:text-slate-900 transition-all cursor-pointer appearance-none pr-7 shadow-sm";
+
+const getAccNoRank = (item, term) => {
+  const accNo = String(item.AccNo ?? "").toLowerCase();
+  if (accNo === term) return 0;
+  if (accNo.startsWith(term)) return 1;
+  return 2;
+};
+
+const matchesSearchTerm = (item, term) => {
+  if (!term) return true;
+  if (String(item.AccNo ?? "").toLowerCase().includes(term)) return true;
+  if (String(item.Full_Name ?? "").toLowerCase().includes(term)) return true;
+  if (String(item.HOF_ID ?? "").toLowerCase().includes(term)) return true;
+  if (String(item.Status ?? "").toLowerCase().includes(term)) return true;
+  return String(item.Received_By ?? "").toLowerCase().includes(term);
+};
+
+const getSuggestions = (data, term) => {
+  if (!term) return [];
+
+  const accNoStartsWith = [];
+  const accNoIncludes = [];
+  const otherMatches = [];
+
+  for (const item of data) {
+    const total =
+      accNoStartsWith.length + accNoIncludes.length + otherMatches.length;
+    if (total >= 7) break;
+
+    const accStr = String(item.AccNo ?? "").toLowerCase();
+    if (accStr.startsWith(term)) {
+      accNoStartsWith.push(item);
+      continue;
+    }
+    if (accStr.includes(term)) {
+      accNoIncludes.push(item);
+      continue;
+    }
+
+    const nameStr = String(item.Full_Name ?? "").toLowerCase();
+    const hofStr = String(item.HOF_ID ?? "").toLowerCase();
+    if (nameStr.includes(term) || hofStr.includes(term)) {
+      otherMatches.push(item);
+    }
+  }
+
+  return [...accNoStartsWith, ...accNoIncludes, ...otherMatches].slice(0, 7);
+};
 
 export const DistributionTable = ({
   data,
@@ -30,11 +83,14 @@ export const DistributionTable = ({
   const [dateFilter, setDateFilter] = React.useState("All");
   const [dayFilter, setDayFilter] = React.useState("All");
   const [currentPage, setCurrentPage] = React.useState(1);
-  const rowsPerPage = 15;
 
-  const [suggestions, setSuggestions] = React.useState([]);
   const [showDropdown, setShowDropdown] = React.useState(false);
   const searchContainerRef = React.useRef(null);
+  const normalizedSearchTerm = searchTerm.toLowerCase().trim();
+  const suggestions = React.useMemo(
+    () => getSuggestions(data, normalizedSearchTerm),
+    [data, normalizedSearchTerm],
+  );
 
   React.useEffect(() => {
     const handleClickOutside = (e) => {
@@ -57,57 +113,16 @@ export const DistributionTable = ({
   }, []);
 
   const handleSearchChange = (e) => {
-    const val = e.target.value;
-    setSearchTerm(val);
-    const term = val.toLowerCase().trim();
-    if (term.length < 1) {
-      setSuggestions([]);
-      setShowDropdown(false);
-      return;
-    }
-    const accNoStartsWith = [];
-    const accNoIncludes = [];
-    const otherMatches = [];
-    for (const item of data) {
-      if (
-        accNoStartsWith.length + accNoIncludes.length + otherMatches.length >=
-        7
-      )
-        break;
-      const accStr =
-        item.AccNo !== null && item.AccNo !== undefined
-          ? String(item.AccNo).toLowerCase()
-          : "";
-      if (accStr.startsWith(term)) {
-        accNoStartsWith.push(item);
-        continue;
-      }
-      if (accStr.includes(term)) {
-        accNoIncludes.push(item);
-        continue;
-      }
-      const nameStr = item.Full_Name ? item.Full_Name.toLowerCase() : "";
-      const hofStr =
-        item.HOF_ID !== null && item.HOF_ID !== undefined
-          ? String(item.HOF_ID).toLowerCase()
-          : "";
-      if (nameStr.includes(term) || hofStr.includes(term))
-        otherMatches.push(item);
-    }
-    const sortedSuggestions = [
-      ...accNoStartsWith,
-      ...accNoIncludes,
-      ...otherMatches,
-    ].slice(0, 7);
-    setSuggestions(sortedSuggestions);
-    setShowDropdown(sortedSuggestions.length > 0);
+    const value = e.target.value;
+    setSearchTerm(value);
+    setShowDropdown(value.trim().length > 0);
   };
 
   const filterOptions = React.useMemo(() => {
     const receivers = new Map();
     const dates = new Map();
     const days = new Map();
-    const statuses = { Pending: 0, Given: 0, "Not Allowed": 0 };
+    const statuses = { ...STATUS_COUNTS };
     data.forEach((item) => {
       if (item.Status in statuses) statuses[item.Status]++;
       if (item.Received_By)
@@ -136,74 +151,56 @@ export const DistributionTable = ({
   }, [data]);
 
   const filteredData = React.useMemo(() => {
-    const term = searchTerm.toLowerCase().trim();
-    const getAccNoRank = (item) => {
-      if (!term) return 2;
-      const accNo = String(item.AccNo ?? "").toLowerCase();
-      if (accNo === term) return 0;
-      if (accNo.startsWith(term)) return 1;
-      return 2;
-    };
-    return data
-      .filter((item) => {
-        const checkSearch = () => {
-          if (!term) return true;
-          if (
-            String(item.AccNo ?? "")
-              .toLowerCase()
-              .includes(term)
-          )
-            return true;
-          if (
-            String(item.Full_Name ?? "")
-              .toLowerCase()
-              .includes(term)
-          )
-            return true;
-          if (
-            String(item.HOF_ID ?? "")
-              .toLowerCase()
-              .includes(term)
-          )
-            return true;
-          if (
-            String(item.Status ?? "")
-              .toLowerCase()
-              .includes(term)
-          )
-            return true;
-          if (
-            String(item.Received_By ?? "")
-              .toLowerCase()
-              .includes(term)
-          )
-            return true;
-          return false;
-        };
-        return (
-          checkSearch() &&
-          (statusFilter === "All" || item.Status === statusFilter) &&
-          (receiverFilter === "All" ||
-            (item.Received_By &&
-              item.Received_By.toLowerCase() ===
-                receiverFilter.toLowerCase())) &&
-          (dateFilter === "All" || item.Update_Date === dateFilter) &&
-          (dayFilter === "All" || item.Update_Day === dayFilter)
-        );
-      })
-      .sort((a, b) => {
-        const rankA = getAccNoRank(a);
-        const rankB = getAccNoRank(b);
-        if (rankA !== rankB) return rankA - rankB;
-        return 0;
-      });
-  }, [data, searchTerm, statusFilter, receiverFilter, dateFilter, dayFilter]);
+    const term = normalizedSearchTerm;
+    const receiverTerm = receiverFilter.toLowerCase();
+    const result = [];
 
-  const totalPages = Math.ceil(filteredData.length / rowsPerPage);
+    for (const item of data) {
+      if (statusFilter !== "All" && item.Status !== statusFilter) continue;
+      if (dateFilter !== "All" && item.Update_Date !== dateFilter) continue;
+      if (dayFilter !== "All" && item.Update_Day !== dayFilter) continue;
+      if (
+        receiverFilter !== "All" &&
+        String(item.Received_By ?? "").toLowerCase() !== receiverTerm
+      ) {
+        continue;
+      }
+      if (!matchesSearchTerm(item, term)) continue;
+
+      result.push(item);
+    }
+
+    if (!term) return result;
+
+    return result.sort((a, b) => {
+      const rankA = getAccNoRank(a, term);
+      const rankB = getAccNoRank(b, term);
+      return rankA - rankB;
+    });
+  }, [
+    data,
+    normalizedSearchTerm,
+    statusFilter,
+    receiverFilter,
+    dateFilter,
+    dayFilter,
+  ]);
+
+  const totalPages = Math.ceil(filteredData.length / ROWS_PER_PAGE);
   const paginatedData = React.useMemo(() => {
-    const start = (currentPage - 1) * rowsPerPage;
-    return filteredData.slice(start, start + rowsPerPage);
+    const start = (currentPage - 1) * ROWS_PER_PAGE;
+    return filteredData.slice(start, start + ROWS_PER_PAGE);
   }, [filteredData, currentPage]);
+
+  const filteredStats = React.useMemo(() => {
+    const stats = { total: filteredData.length, given: 0, pending: 0, blocked: 0 };
+    for (const item of filteredData) {
+      if (item.Status === "Given") stats.given += 1;
+      else if (item.Status === "Pending") stats.pending += 1;
+      else if (item.Status === "Not Allowed") stats.blocked += 1;
+    }
+    return stats;
+  }, [filteredData]);
 
   React.useEffect(() => {
     setCurrentPage(1);
@@ -216,7 +213,7 @@ export const DistributionTable = ({
         (item) => String(item.HOF_ID) === String(hofId),
       );
       if (targetIndex !== -1) {
-        const targetPage = Math.floor(targetIndex / rowsPerPage) + 1;
+        const targetPage = Math.floor(targetIndex / ROWS_PER_PAGE) + 1;
         setCurrentPage(targetPage);
         setTimeout(() => {
           const element = document.getElementById(`hof-row-${hofId}`);
@@ -308,7 +305,7 @@ export const DistributionTable = ({
                   if (suggestions.length > 0) setShowDropdown(true);
                 }}
               />
-              {showDropdown && (
+              {showDropdown && suggestions.length > 0 && (
                 <div className="dt-dropdown absolute z-50 left-0 right-0 mt-1.5 bg-white border border-slate-200 rounded-xl shadow-xl max-h-64 overflow-y-auto">
                   {suggestions.map((item, idx) => (
                     <div
@@ -427,31 +424,28 @@ export const DistributionTable = ({
                 <span className="w-1.5 h-1.5 rounded-full bg-blue-500 inline-block"></span>
                 Found{" "}
                 <span className="text-slate-900 ml-1">
-                  {filteredData.length}
+                  {filteredStats.total}
                 </span>
               </span>
               <span className="dt-stat-pill bg-emerald-50 text-emerald-700 border border-emerald-100">
                 <CheckCircle2 className="w-3 h-3 text-emerald-600" />
                 Given{" "}
                 <span className="text-emerald-800 ml-1">
-                  {filteredData.filter((i) => i.Status === "Given").length}
+                  {filteredStats.given}
                 </span>
               </span>
               <span className="dt-stat-pill bg-amber-50 text-amber-700 border border-amber-100">
                 <Clock className="w-3 h-3 text-amber-600" />
                 Pending{" "}
                 <span className="text-amber-800 ml-1">
-                  {filteredData.filter((i) => i.Status === "Pending").length}
+                  {filteredStats.pending}
                 </span>
               </span>
               <span className="dt-stat-pill bg-rose-50 text-rose-700 border border-rose-100">
                 <AlertCircle className="w-3 h-3 text-rose-600" />
                 Blocked{" "}
                 <span className="text-rose-800 ml-1">
-                  {
-                    filteredData.filter((i) => i.Status === "Not Allowed")
-                      .length
-                  }
+                  {filteredStats.blocked}
                 </span>
               </span>
               {receiverFilter !== "All" && (
@@ -526,7 +520,7 @@ export const DistributionTable = ({
                     </td>
 
                     {/* Full Name */}
-                    <td className="py-3.5 px-4 text-[14px] font-semibold text-slate-800 whitespace-normal break-words max-w-[200px]">
+                    <td className="py-3.5 px-4 text-[14px] font-semibold text-slate-800 whitespace-normal break-words">
                       {item.Full_Name}
                     </td>
 
@@ -641,11 +635,11 @@ export const DistributionTable = ({
           <div className="px-5 py-3.5 border-t border-slate-200 bg-slate-50 flex items-center justify-between gap-4">
             <p className="text-[11px] text-slate-500 font-mono">
               <span className="text-slate-700">
-                {(currentPage - 1) * rowsPerPage + 1}
+                {(currentPage - 1) * ROWS_PER_PAGE + 1}
               </span>
               {" – "}
               <span className="text-slate-700">
-                {Math.min(currentPage * rowsPerPage, filteredData.length)}
+                {Math.min(currentPage * ROWS_PER_PAGE, filteredData.length)}
               </span>
               {" of "}
               <span className="text-slate-700">{filteredData.length}</span>
