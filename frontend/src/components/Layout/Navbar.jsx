@@ -1,6 +1,6 @@
 import React from 'react';
 import { FileSpreadsheet, RefreshCcw, Cloud, CloudOff, Loader2 } from 'lucide-react';
-import { isSupabaseConfigured } from '../lib/supabase';
+import { isSupabaseConfigured } from '../../lib/supabase';
 
 export function Navbar({
   isSyncing,

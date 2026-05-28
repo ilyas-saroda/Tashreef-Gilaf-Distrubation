@@ -1,7 +1,7 @@
 import React from 'react';
 import * as XLSX from 'xlsx';
 import { Upload, FileSpreadsheet } from 'lucide-react';
-import { cn } from '../lib/utils';
+import { cn } from '../../lib/utils';
 
 export const ExcelUpload = ({ onUpload }) => {
   const [isDragging, setIsDragging] = React.useState(false);

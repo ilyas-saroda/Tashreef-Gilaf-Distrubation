@@ -1,12 +1,12 @@
 import React from "react";
 import { AnalyticsHeader } from "./AnalyticsHeader";
-import { ExcelUpload } from "../ExcelUpload";
+import { ExcelUpload } from "./ExcelUpload";
 import { DistributionTable } from "./DistributionTable";
-import { ResetModal } from "../ResetModal";
-import { DataIntegrityReport } from "../DataIntegrityReport";
-import { RecentUpdates } from "../RecentUpdates";
-import { Navbar } from "../Navbar";
-import { TitleHeader } from "../TitleHeader";
+import { ResetModal } from "../Modals/ResetModal";
+import { DataIntegrityReport } from "./DataIntegrityReport";
+import { RecentUpdates } from "./RecentUpdates";
+import { Navbar } from "../Layout/Navbar";
+import { TitleHeader } from "../Layout/TitleHeader";
 import BulkDistribution from "./BulkDistribution";
 import { supabase, isSupabaseConfigured } from "../../lib/supabase";
 import { cn } from "../../lib/utils";

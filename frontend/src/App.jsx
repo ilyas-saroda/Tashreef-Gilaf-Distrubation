@@ -1,7 +1,7 @@
 import React from "react";
 import { MainDistributionApp } from "./components/MainDistribution/MainDistributionApp";
 import { DynamicExcelViewer } from "./components/DynamicViewer/DynamicExcelViewer";
-import { Footer } from "./components/Footer";
+import { Footer } from "./components/Layout/Footer";
 import { cn } from "./lib/utils";
 import { AnimatePresence, motion } from "motion/react";
 
