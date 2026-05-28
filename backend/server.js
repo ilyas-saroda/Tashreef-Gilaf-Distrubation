@@ -35,9 +35,9 @@ app.get("/api/test-logger", (req, res) => {
   res.json({ success: true, message: "Logger diagnostic triggered! Check your backend/logs/ folder now." });
 });
 
-// Mount modular routers
-app.use("/api", mainRoutes);
-app.use("/api", dynamicRoutes);
+// Decoupled Entry Switchers for Independent Modules
+app.use("/api/main", mainRoutes);
+app.use("/api/dynamic", dynamicRoutes);
 
 app.listen(PORT, () => {
   logger.info(`🚀 Local Excel Companion Server running on: http://localhost:${PORT}`);

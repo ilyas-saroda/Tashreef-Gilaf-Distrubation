@@ -1,8 +1,8 @@
 import React from "react";
 import { FileSpreadsheet, Search, X, ArrowUpRight, RotateCcw } from "lucide-react";
-import { useDynamicEngine } from "./DynamicViewer/useDynamicEngine";
-import { SummaryDashboard } from "./DynamicViewer/SummaryDashboard";
-import { TableRenderer } from "./DynamicViewer/TableRenderer";
+import { useDynamicEngine } from "./useDynamicEngine";
+import { SummaryDashboard } from "./SummaryDashboard";
+import { TableRenderer } from "./TableRenderer";
 
 export function DynamicExcelViewer() {
   const engine = useDynamicEngine();

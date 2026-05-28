@@ -14,7 +14,7 @@ import {
   AlertCircle,
   ArrowUpDown,
 } from "lucide-react";
-import { cn } from "../lib/utils";
+import { cn } from "../../lib/utils";
 
 const ROWS_PER_PAGE = 15;
 const STATUS_COUNTS = { Pending: 0, Given: 0, "Not Allowed": 0 };

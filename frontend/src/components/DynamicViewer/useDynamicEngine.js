@@ -72,7 +72,7 @@ export function useDynamicEngine() {
   const fetchDynamicData = useCallback(async () => {
     try {
       setLoading(true);
-      const res = await fetch(`${API_BASE}/api/load-dynamic`);
+      const res = await fetch(`${API_BASE}/api/dynamic/load-dynamic`);
       const result = await res.json();
 
       const normalized =
@@ -132,7 +132,7 @@ export function useDynamicEngine() {
 
     saveTimerRef.current = setTimeout(async () => {
       try {
-        await fetch(`${API_BASE}/api/save-dynamic`, {
+        await fetch(`${API_BASE}/api/dynamic/save-dynamic`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ data: payload }),

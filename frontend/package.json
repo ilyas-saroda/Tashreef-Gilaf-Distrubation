@@ -22,6 +22,7 @@
     "react": "^19.0.1",
     "react-dom": "^19.0.1",
     "tailwind-merge": "^3.6.0",
+    "tashreef-gilaf-distribution-root": "file:..",
     "vite": "^6.2.3",
     "xlsx": "^0.18.5"
   },

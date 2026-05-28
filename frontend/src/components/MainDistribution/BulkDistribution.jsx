@@ -11,7 +11,7 @@ import {
   ShieldCheck,
   Wrench,
 } from "lucide-react";
-import { cn } from "../lib/utils";
+import { cn } from "../../lib/utils";
 
 // Status badge component with MNC Micro-Designs
 function StatusBadge({ status, receivedBy }) {
