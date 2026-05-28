@@ -1,28 +1,28 @@
-import { useState, useEffect, useMemo, useRef } from "react";
+import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import * as XLSX from "xlsx";
 
-// Hook for debouncing fast typing
+const API_BASE = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000";
+const FILTER_DEBOUNCE_MS = 180;
+const MAX_FILTER_VALUES = 750;
+
 export function useDebounce(value, delay) {
   const [debouncedValue, setDebouncedValue] = useState(value);
+
   useEffect(() => {
-    const handler = setTimeout(() => {
-      setDebouncedValue(value);
-    }, delay);
+    const handler = setTimeout(() => setDebouncedValue(value), delay);
     return () => clearTimeout(handler);
   }, [value, delay]);
+
   return debouncedValue;
 }
 
-// Convert number to Indian words
 export function convertNumberToWords(num) {
   if (!num || isNaN(num) || num === 0) return "Zero Rupees Only";
   const a = [
-    "", "One", "Two", "Three", "Four", "Five", "Six", "Seven", "Eight", "Nine", "Ten", 
-    "Eleven", "Twelve", "Thirteen", "Fourteen", "Fifteen", "Sixteen", "Seventeen", "Eighteen", "Nineteen"
+    "", "One", "Two", "Three", "Four", "Five", "Six", "Seven", "Eight", "Nine", "Ten",
+    "Eleven", "Twelve", "Thirteen", "Fourteen", "Fifteen", "Sixteen", "Seventeen", "Eighteen", "Nineteen",
   ];
-  const b = [
-    "", "", "Twenty", "Thirty", "Forty", "Fifty", "Sixty", "Seventy", "Eighty", "Ninety"
-  ];
+  const b = ["", "", "Twenty", "Thirty", "Forty", "Fifty", "Sixty", "Seventy", "Eighty", "Ninety"];
   const convert = (n) => {
     if (n < 20) return a[n];
     if (n < 100) return b[Math.floor(n / 10)] + (n % 10 !== 0 ? " " + a[n % 10] : "");
@@ -34,61 +34,64 @@ export function convertNumberToWords(num) {
   return convert(Math.floor(num)).trim() + " Rupees Only";
 }
 
+const parseAmount = (val) => {
+  if (!val) return 0;
+  const num = parseFloat(String(val).replace(/[^0-9.-]+/g, ""));
+  return Number.isFinite(num) ? num : 0;
+};
+
+const cleanWorkbookData = (workbookData) => {
+  const payload = {};
+  for (const [sheetName, rows] of Object.entries(workbookData)) {
+    payload[sheetName] = rows.map((row) => {
+      const { __originalIndex, __searchText, ...cleanRow } = row;
+      return cleanRow;
+    });
+  }
+  return payload;
+};
+
 export function useDynamicEngine() {
   const [allData, setAllData] = useState({});
   const [sheets, setSheets] = useState([]);
   const [activeSheet, setActiveSheet] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
   const [columnFilters, setColumnFilters] = useState({});
-  const [editingCell, setEditingCell] = useState(null); // { originalIndex, header }
+  const [editingCell, setEditingCell] = useState(null);
   const [editValue, setEditValue] = useState("");
   const [loading, setLoading] = useState(true);
-
-  const data = allData[activeSheet] || [];
-  const headers = data.length > 0 ? Object.keys(data[0]) : [];
-
-  // ADVANCED CACHE LAYER: Memoized Cache Map for instant O(0) sub-second re-renders
-  const filterCacheRef = useRef(new Map());
-
-  // Active dropdown state for column filters
   const [activeDropdown, setActiveDropdown] = useState(null);
   const dropdownRef = useRef(null);
+  const saveTimerRef = useRef(null);
 
-  // Debounced states for ultra-fast UI rendering without freezing
-  const debouncedSearchTerm = useDebounce(searchTerm, 300);
-  const debouncedColumnFilters = useDebounce(columnFilters, 300);
+  const data = allData[activeSheet] || [];
+  const headers = useMemo(() => (data.length > 0 ? Object.keys(data[0]) : []), [data]);
+  const debouncedSearchTerm = useDebounce(searchTerm, FILTER_DEBOUNCE_MS);
+  const debouncedColumnFilters = useDebounce(columnFilters, FILTER_DEBOUNCE_MS);
 
-  // Load from local backend server on mount
-  useEffect(() => {
-    fetchDynamicData();
-  }, []);
-
-  // Close dropdown when clicking outside
-  useEffect(() => {
-    function handleClickOutside(event) {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
-        setActiveDropdown(null);
-      }
-    }
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
-
-  const fetchDynamicData = async () => {
+  const fetchDynamicData = useCallback(async () => {
     try {
       setLoading(true);
-      const res = await fetch("http://localhost:5000/api/load-dynamic");
+      const res = await fetch(`${API_BASE}/api/load-dynamic`);
       const result = await res.json();
-      
-      if (typeof result === 'object' && result !== null && !Array.isArray(result) && Object.keys(result).length > 0) {
-        setAllData(result);
-        const sheetNames = Object.keys(result);
+
+      const normalized =
+        result && typeof result === "object" && result.sheets && result.data
+          ? result.data
+          : result;
+
+      if (
+        normalized &&
+        typeof normalized === "object" &&
+        !Array.isArray(normalized) &&
+        Object.keys(normalized).length > 0
+      ) {
+        const sheetNames = Object.keys(normalized);
+        setAllData(normalized);
         setSheets(sheetNames);
-        setActiveSheet(sheetNames[0]);
-      } else if (Array.isArray(result) && result.length > 0) {
-        // Fallback for legacy flat array cache
-        const legacyData = { Sheet1: result };
-        setAllData(legacyData);
+        setActiveSheet((current) => (current && normalized[current] ? current : sheetNames[0]));
+      } else if (Array.isArray(normalized) && normalized.length > 0) {
+        setAllData({ Sheet1: normalized });
         setSheets(["Sheet1"]);
         setActiveSheet("Sheet1");
       } else {
@@ -101,32 +104,44 @@ export function useDynamicEngine() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
-  const saveUpdate = async (updatedAllData) => {
-    // INVALIDATE CACHE: Clear the cache map completely whenever data changes
-    filterCacheRef.current.clear();
-    
-    // Clean data before sending to server (remove warehouse meta-properties)
-    const payload = {};
-    for (const sheetName in updatedAllData) {
-      payload[sheetName] = updatedAllData[sheetName].map(row => {
-        const { __originalIndex, __lowerRow, __fullText, ...cleanRow } = row;
-        return cleanRow;
-      });
-    }
+  useEffect(() => {
+    fetchDynamicData();
+  }, [fetchDynamicData]);
 
-    try {
-      const API_BASE = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000";
-      await fetch(`${API_BASE}/api/save-dynamic`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ data: payload }),
-      });
-    } catch (e) {
-      console.warn("Could not save to dynamic server:", e);
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setActiveDropdown(null);
+      }
     }
-  };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+    };
+  }, []);
+
+  const saveUpdate = useCallback(async (updatedAllData) => {
+    const payload = cleanWorkbookData(updatedAllData);
+    if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+
+    saveTimerRef.current = setTimeout(async () => {
+      try {
+        await fetch(`${API_BASE}/api/save-dynamic`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ data: payload }),
+        });
+      } catch (e) {
+        console.warn("Could not save to dynamic server:", e);
+      }
+    }, 120);
+  }, []);
 
   const handleFileUpload = (e) => {
     const file = e.target.files[0];
@@ -134,27 +149,30 @@ export function useDynamicEngine() {
 
     const reader = new FileReader();
     reader.onload = async (evt) => {
-      const bstr = evt.target.result;
-      const wb = XLSX.read(bstr, { type: "binary" });
-      
+      const wb = XLSX.read(evt.target.result, { type: "array" });
       const newAllData = {};
-      wb.SheetNames.forEach(name => {
-        newAllData[name] = XLSX.utils.sheet_to_json(wb.Sheets[name]);
+
+      wb.SheetNames.forEach((name) => {
+        newAllData[name] = XLSX.utils.sheet_to_json(wb.Sheets[name], {
+          defval: "",
+          raw: false,
+        });
       });
 
-      if (Object.keys(newAllData).length > 0) {
-        filterCacheRef.current.clear(); // Clear cache for new data
-        setAllData(newAllData);
-        setSheets(wb.SheetNames);
-        setActiveSheet(wb.SheetNames[0]);
-        setColumnFilters({});
-        setSearchTerm("");
-        await saveUpdate(newAllData);
-      } else {
+      if (Object.keys(newAllData).length === 0) {
         alert("This Excel sheet seems to be empty.");
+        return;
       }
+
+      setAllData(newAllData);
+      setSheets(wb.SheetNames);
+      setActiveSheet(wb.SheetNames[0]);
+      setColumnFilters({});
+      setSearchTerm("");
+      setActiveDropdown(null);
+      await saveUpdate(newAllData);
     };
-    reader.readAsBinaryString(file);
+    reader.readAsArrayBuffer(file);
     e.target.value = "";
   };
 
@@ -164,7 +182,7 @@ export function useDynamicEngine() {
   };
 
   const handleCellEditSave = async (originalIndex, header) => {
-    const activeSheetData = [...data];
+    const activeSheetData = data.slice();
     activeSheetData[originalIndex] = {
       ...activeSheetData[originalIndex],
       [header]: editValue,
@@ -184,220 +202,99 @@ export function useDynamicEngine() {
     setActiveDropdown(null);
   };
 
-  const hasActiveFilters = searchTerm !== "" || Object.values(columnFilters).some(v => v !== "");
+  const hasActiveFilters =
+    searchTerm !== "" || Object.values(columnFilters).some((value) => value !== "");
 
-  // 1. CLIENT-SIDE DATA WAREHOUSE: PARTITIONING & INDEXING (O(1) Lookups)
-  const warehouse = useMemo(() => {
-    const partitions = {}; // Localized physical memory buckets for exact matches
-    const indexes = {};    // Fast partial text search indexes
-    
-    headers.forEach(h => {
-      partitions[h] = new Map(); // Value -> Set of row IDs (Exact Match Bucket)
-      indexes[h] = new Map();    // Lowercase Substring Value -> Set of row IDs
+  const preparedRows = useMemo(() => {
+    return data.map((row, originalIndex) => {
+      const searchText = headers
+        .map((header) => String(row[header] ?? "").toLowerCase())
+        .join("\u0001");
+      return { row, originalIndex, searchText };
     });
-
-    const enhancedData = data.map((row, idx) => {
-      const lowerRow = {};
-      let fullText = "";
-      
-      headers.forEach(h => {
-        const val = row[h] != null ? String(row[h]) : "";
-        const lowerVal = val.toLowerCase();
-        lowerRow[h] = lowerVal;
-        fullText += lowerVal + " ";
-
-        // Build Index (For substring searches)
-        if (!indexes[h].has(lowerVal)) {
-          indexes[h].set(lowerVal, new Set());
-        }
-        indexes[h].get(lowerVal).add(idx);
-
-        // Build Partition Bucket (For fast distinct dropdown lookups and exact grouping)
-        if (!partitions[h].has(val)) {
-          partitions[h].set(val, new Set());
-        }
-        partitions[h].get(val).add(idx);
-      });
-
-      return { 
-        ...row, 
-        __originalIndex: idx, 
-        __lowerRow: lowerRow,
-        __fullText: fullText
-      };
-    });
-    
-    // Invalidate stale views when base warehouse rebuilds
-    filterCacheRef.current.clear();
-    
-    return { enhancedData, partitions, indexes };
   }, [data, headers]);
 
-  // 2. CASCADING INTERSECTION VIEWS (Multi-Column Cumulative Engine)
-  const filteredIndices = useMemo(() => {
-    const { enhancedData, indexes } = warehouse;
-    const globalSearchLower = debouncedSearchTerm.toLowerCase();
-    
-    const activeFilters = Object.entries(debouncedColumnFilters)
-      .filter(([_, val]) => val)
-      .map(([key, val]) => [key, val.toLowerCase()]);
+  const activeFilterEntries = useMemo(() => {
+    return Object.entries(debouncedColumnFilters)
+      .filter(([, value]) => value)
+      .map(([header, value]) => [header, String(value).toLowerCase()]);
+  }, [debouncedColumnFilters]);
 
-    // Check Cache Layer First
-    const cacheKey = "view:" + JSON.stringify({ g: globalSearchLower, f: activeFilters });
-    if (filterCacheRef.current.has(cacheKey)) {
-      return filterCacheRef.current.get(cacheKey);
-    }
+  const filteredEntries = useMemo(() => {
+    const globalSearch = debouncedSearchTerm.trim().toLowerCase();
+    const result = [];
 
-    let subsetIndices = null; // null = entire dataset
+    for (let i = 0; i < preparedRows.length; i++) {
+      const entry = preparedRows[i];
+      if (globalSearch && !entry.searchText.includes(globalSearch)) continue;
 
-    // A. Intersect Column Filters using Map Indexes
-    if (activeFilters.length > 0) {
-      for (let i = 0; i < activeFilters.length; i++) {
-        const [header, filterVal] = activeFilters[i];
-        const colIndexMap = indexes[header];
-        
-        let matchingForThisCol = new Set();
-        // O(N_keys) scan of unique keys, avoiding O(N_rows) scan
-        for (const [key, indicesSet] of colIndexMap.entries()) {
-          if (key.includes(filterVal)) {
-            for (const idx of indicesSet) matchingForThisCol.add(idx);
-          }
-        }
-
-        // Apply Cumulative Intersection
-        if (subsetIndices === null) {
-          subsetIndices = matchingForThisCol;
-        } else {
-          const intersection = new Set();
-          for (const idx of matchingForThisCol) {
-            if (subsetIndices.has(idx)) {
-              intersection.add(idx);
-            }
-          }
-          subsetIndices = intersection;
-        }
-
-        if (subsetIndices.size === 0) break; // Fast fail if subset is empty
-      }
-    }
-
-    // B. Intersect Global Search onto the active View
-    if (globalSearchLower) {
-      const matchGlobal = new Set();
-      const indicesToSearch = subsetIndices !== null ? Array.from(subsetIndices) : enhancedData.map(r => r.__originalIndex);
-      
-      for (let i = 0; i < indicesToSearch.length; i++) {
-        const idx = indicesToSearch[i];
-        if (enhancedData[idx].__fullText.includes(globalSearchLower)) {
-          matchGlobal.add(idx);
+      let matches = true;
+      for (let j = 0; j < activeFilterEntries.length; j++) {
+        const [header, filterValue] = activeFilterEntries[j];
+        if (!String(entry.row[header] ?? "").toLowerCase().includes(filterValue)) {
+          matches = false;
+          break;
         }
       }
-      subsetIndices = matchGlobal;
+      if (matches) result.push(entry);
     }
 
-    // Save final View to Cache
-    const finalArray = subsetIndices !== null ? Array.from(subsetIndices) : enhancedData.map(r => r.__originalIndex);
-    filterCacheRef.current.set(cacheKey, finalArray);
-    return finalArray;
-  }, [warehouse, debouncedSearchTerm, debouncedColumnFilters]);
+    return result;
+  }, [preparedRows, debouncedSearchTerm, activeFilterEntries]);
 
-  // Map active View indices back to physical row objects
   const filteredData = useMemo(() => {
-    return filteredIndices.map(idx => warehouse.enhancedData[idx]);
-  }, [filteredIndices, warehouse.enhancedData]);
+    return filteredEntries.map(({ row, originalIndex }) => ({
+      ...row,
+      __originalIndex: originalIndex,
+    }));
+  }, [filteredEntries]);
 
-  // 3. DYNAMIC CASCADING SUGGESTIONS (Populate dropdowns natively from intersected views)
   const uniqueColumnValues = useMemo(() => {
-    const { enhancedData, indexes } = warehouse;
     const uniqueVals = {};
-    const globalSearchLower = debouncedSearchTerm.toLowerCase();
-    
-    const activeFilters = Object.entries(debouncedColumnFilters)
-      .filter(([_, val]) => val)
-      .map(([key, val]) => [key, val.toLowerCase()]);
+    headers.forEach((header) => {
+      uniqueVals[header] = [];
+    });
+
+    const sets = {};
+    headers.forEach((header) => {
+      sets[header] = new Set();
+    });
+
+    for (let i = 0; i < filteredEntries.length; i++) {
+      const row = filteredEntries[i].row;
+      for (let h = 0; h < headers.length; h++) {
+        const header = headers[h];
+        const value = row[header];
+        if (value === undefined || value === null || value === "") continue;
+        if (sets[header].size < MAX_FILTER_VALUES) {
+          sets[header].add(String(value));
+        }
+      }
+    }
 
     headers.forEach((header) => {
-      // Calculate intersection WITHOUT this column's own filter
-      const otherFilters = activeFilters.filter(([key]) => key !== header);
-      const cacheKey = "sugg:" + JSON.stringify({ g: globalSearchLower, f: otherFilters, target: header });
-      
-      if (filterCacheRef.current.has(cacheKey)) {
-        uniqueVals[header] = filterCacheRef.current.get(cacheKey);
-        return;
-      }
-
-      let subsetIndices = null;
-      if (otherFilters.length > 0) {
-        for (let i = 0; i < otherFilters.length; i++) {
-          const [oHeader, oFilterVal] = otherFilters[i];
-          const colIndexMap = indexes[oHeader];
-          let matchingForThisCol = new Set();
-          for (const [key, indicesSet] of colIndexMap.entries()) {
-            if (key.includes(oFilterVal)) {
-              for (const idx of indicesSet) matchingForThisCol.add(idx);
-            }
-          }
-          if (subsetIndices === null) subsetIndices = matchingForThisCol;
-          else {
-            const intersection = new Set();
-            for (const idx of matchingForThisCol) {
-              if (subsetIndices.has(idx)) intersection.add(idx);
-            }
-            subsetIndices = intersection;
-          }
-          if (subsetIndices.size === 0) break;
-        }
-      }
-
-      if (globalSearchLower) {
-        const matchGlobal = new Set();
-        const indicesToSearch = subsetIndices !== null ? Array.from(subsetIndices) : enhancedData.map(r => r.__originalIndex);
-        for (let i = 0; i < indicesToSearch.length; i++) {
-          const idx = indicesToSearch[i];
-          if (enhancedData[idx].__fullText.includes(globalSearchLower)) {
-            matchGlobal.add(idx);
-          }
-        }
-        subsetIndices = matchGlobal;
-      }
-
-      // Collect available unique values for the dropdown based on the subset
-      const indicesToUse = subsetIndices !== null ? Array.from(subsetIndices) : enhancedData.map(r => r.__originalIndex);
-      const vals = new Set();
-      for (let i = 0; i < indicesToUse.length; i++) {
-        const val = enhancedData[indicesToUse[i]][header];
-        if (val !== undefined && val !== null && val !== "") {
-          vals.add(String(val));
-        }
-      }
-      
-      const result = Array.from(vals).sort();
-      filterCacheRef.current.set(cacheKey, result);
-      uniqueVals[header] = result;
+      uniqueVals[header] = Array.from(sets[header]).sort();
     });
     return uniqueVals;
-  }, [warehouse, debouncedSearchTerm, debouncedColumnFilters, headers]);
+  }, [filteredEntries, headers]);
 
-  // 4. AMOUNT TRACKER IN INR (RUPEES) & WORDS
-  const amountHeader = useMemo(() => {
-    return headers.find(h => /amount/i.test(h));
-  }, [headers]);
+  const amountHeader = useMemo(() => headers.find((header) => /amount/i.test(header)), [headers]);
 
   const { totalAmount, filteredAmount } = useMemo(() => {
     if (!amountHeader) return { totalAmount: 0, filteredAmount: 0 };
-    
-    const parseAmount = (val) => {
-      if (!val) return 0;
-      const num = parseFloat(String(val).replace(/[^0-9.-]+/g,""));
-      return isNaN(num) ? 0 : num;
-    };
-    
-    // Extreme micro-optimized reduction
-    const total = warehouse.enhancedData.reduce((sum, row) => sum + parseAmount(row[amountHeader]), 0);
-    const filtered = filteredData.reduce((sum, row) => sum + parseAmount(row[amountHeader]), 0);
-    
+
+    let total = 0;
+    for (let i = 0; i < preparedRows.length; i++) {
+      total += parseAmount(preparedRows[i].row[amountHeader]);
+    }
+
+    let filtered = 0;
+    for (let i = 0; i < filteredEntries.length; i++) {
+      filtered += parseAmount(filteredEntries[i].row[amountHeader]);
+    }
+
     return { totalAmount: total, filteredAmount: filtered };
-  }, [warehouse.enhancedData, filteredData, amountHeader]);
+  }, [preparedRows, filteredEntries, amountHeader]);
 
   return {
     sheets,
@@ -426,6 +323,6 @@ export function useDynamicEngine() {
     uniqueColumnValues,
     amountHeader,
     totalAmount,
-    filteredAmount
+    filteredAmount,
   };
 }
