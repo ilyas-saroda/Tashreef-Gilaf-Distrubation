@@ -1,11 +1,25 @@
 import express from "express";
 import morgan from "morgan";
+import dotenv from "dotenv";
 import logger from "./src/config/logger.js";
 import dynamicRoutes from "./src/routes/dynamicRoutes.js";
 import mainRoutes from "./src/routes/mainRoutes.js";
 
+// Load environment variables
+dotenv.config();
+
+// Validate required environment variables
+const requiredEnvVars = ["SUPABASE_URL", "SUPABASE_SERVICE_ROLE_KEY"];
+const missingVars = requiredEnvVars.filter((envVar) => !process.env[envVar]);
+
+if (missingVars.length > 0) {
+  logger.error(`[Startup Error] Missing required environment variables: ${missingVars.join(", ")}`);
+  console.error(`\n❌ [Startup Error] Missing required environment variables: ${missingVars.join(", ")}\nServer shutting down.`);
+  process.exit(1); // Stop the server at startup
+}
+
 const app = express();
-const PORT = 5000;
+const PORT = process.env.PORT || 5000;
 
 // Morgan HTTP request logging
 app.use(
