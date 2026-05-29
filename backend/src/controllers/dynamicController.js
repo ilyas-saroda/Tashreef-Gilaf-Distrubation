@@ -131,3 +131,30 @@ export const loadDynamic = (req, res) => {
     return res.status(500).json({ success: false, error: error.message });
   }
 };
+
+export const updateCell = (req, res) => {
+  try {
+    const { rowId, columnKey, newValue, sheetName } = req.body;
+
+    if (!dynamicSheetCache) {
+      readDynamicWorkbook();
+    }
+
+    if (!dynamicSheetCache[sheetName]) {
+      dynamicSheetCache[sheetName] = [];
+    }
+
+    if (dynamicSheetCache[sheetName][rowId]) {
+      dynamicSheetCache[sheetName][rowId][columnKey] = newValue;
+    } else {
+      dynamicSheetCache[sheetName][rowId] = { [columnKey]: newValue };
+    }
+
+    scheduleWorkbookWrite(dynamicSheetCache);
+
+    return res.json({ success: true, message: "Cell updated successfully" });
+  } catch (error) {
+    logger.error("[Dynamic Cell Update Error]", { error: error.message, stack: error.stack });
+    return res.status(500).json({ success: false, error: error.message });
+  }
+};

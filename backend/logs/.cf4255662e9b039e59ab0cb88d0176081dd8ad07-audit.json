@@ -1,0 +1,15 @@
+{
+    "keep": {
+        "days": true,
+        "amount": 14
+    },
+    "auditLog": "C:\\Tashreef Gilaf\\Tashreef-Gilaf-Distrubation\\backend\\logs\\.cf4255662e9b039e59ab0cb88d0176081dd8ad07-audit.json",
+    "files": [
+        {
+            "date": 1780035540073,
+            "name": "C:\\Tashreef Gilaf\\Tashreef-Gilaf-Distrubation\\backend\\logs\\combined-2026-05-29.log",
+            "hash": "711b88724025ba6dd403a2df507ca36bf33f143acd6a4e9f922ac9b86c901bed"
+        }
+    ],
+    "hashType": "sha256"
+}

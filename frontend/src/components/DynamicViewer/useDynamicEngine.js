@@ -182,10 +182,11 @@ export function useDynamicEngine() {
   };
 
   const handleCellEditSave = async (originalIndex, header) => {
+    const newValue = editValue;
     const activeSheetData = data.slice();
     activeSheetData[originalIndex] = {
       ...activeSheetData[originalIndex],
-      [header]: editValue,
+      [header]: newValue,
     };
     const updatedAllData = {
       ...allData,
@@ -193,7 +194,16 @@ export function useDynamicEngine() {
     };
     setAllData(updatedAllData);
     setEditingCell(null);
-    await saveUpdate(updatedAllData);
+    
+    try {
+      await fetch(`${API_BASE}/api/dynamic/update-cell`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ rowId: originalIndex, columnKey: header, newValue, sheetName: activeSheet }),
+      });
+    } catch (err) {
+      console.error("Dynamic cell save network error:", err);
+    }
   };
 
   const handleResetFilters = () => {

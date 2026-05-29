@@ -125,10 +125,14 @@ export function TableRenderer({
                               type="text"
                               value={editValue}
                               onChange={(e) => setEditValue(e.target.value)}
-                              onKeyDown={(e) =>
-                                e.key === "Enter" &&
-                                handleCellEditSave(originalIndex, header)
-                              }
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter") {
+                                  handleCellEditSave(originalIndex, header);
+                                } else if (e.key === "Escape") {
+                                  setEditingCell(null);
+                                }
+                              }}
+                              onBlur={() => handleCellEditSave(originalIndex, header)}
                               className="mnc-input-global w-full px-2 py-1.5 text-xs focus:outline-none font-medium"
                               autoFocus
                             />
