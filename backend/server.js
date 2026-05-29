@@ -8,14 +8,13 @@ import mainRoutes from "./src/routes/mainRoutes.js";
 // Load environment variables
 dotenv.config();
 
-// Validate required environment variables
+// Validate required environment variables (Log warning instead of crashing to allow local Excel fallback)
 const requiredEnvVars = ["SUPABASE_URL", "SUPABASE_SERVICE_ROLE_KEY"];
 const missingVars = requiredEnvVars.filter((envVar) => !process.env[envVar]);
 
 if (missingVars.length > 0) {
-  logger.error(`[Startup Error] Missing required environment variables: ${missingVars.join(", ")}`);
-  console.error(`\n❌ [Startup Error] Missing required environment variables: ${missingVars.join(", ")}\nServer shutting down.`);
-  process.exit(1); // Stop the server at startup
+  logger.warn(`[Startup Warning] Missing database credentials: ${missingVars.join(", ")}. Local Excel fallback is active.`);
+  console.warn(`\n⚠️ [Startup Warning] Missing database credentials: ${missingVars.join(", ")}.\nLocal Excel fallback is active. Supabase sync will be disabled.\n`);
 }
 
 const app = express();

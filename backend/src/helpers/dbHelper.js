@@ -7,12 +7,14 @@ const supabaseUrl = process.env.SUPABASE_URL;
 // Priority: Service Role Key (for backend), then Anon Key, then generic Key
 const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY || process.env.SUPABASE_KEY;
 
-if (!supabaseUrl || !supabaseKey) {
-  console.warn('⚠️ Missing Supabase environment variables (SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY). Database operations may fail.');
-}
+let supabase = null;
 
-// Initialize the Supabase client
-const supabase = createClient(supabaseUrl || '', supabaseKey || '');
+if (!supabaseUrl || !supabaseKey) {
+  console.warn('⚠️ Missing Supabase environment variables (SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY). Database operations will fail if called.');
+} else {
+  // Initialize the Supabase client
+  supabase = createClient(supabaseUrl, supabaseKey);
+}
 
 /**
  * Reusable abstract CRUD database helper functions.

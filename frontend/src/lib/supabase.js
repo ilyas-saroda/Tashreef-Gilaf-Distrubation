@@ -1,10 +1,14 @@
 import { createClient } from '@supabase/supabase-js';
 
-const supabaseUrl = 'https://yownztngxtaaywutgtat.supabase.co';
-const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inlvd256dG5neHRhYXl3dXRndGF0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg2NTEyNzIsImV4cCI6MjA5NDIyNzI3Mn0.nhnN4llv2st3D2E6tSppLjTh7q6HRGOUK00arM4-Nu8';
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
-console.log('Initializing Supabase with URL:', supabaseUrl);
+export let isSupabaseConfigured = false;
+export let supabase = null;
 
-export const isSupabaseConfigured = true; // Always true now since we hardcoded fallback
-
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+if (!supabaseUrl || !supabaseAnonKey) {
+  console.log('Supabase configuration missing in .env, skipping client init');
+} else {
+  isSupabaseConfigured = true;
+  supabase = createClient(supabaseUrl, supabaseAnonKey);
+}
