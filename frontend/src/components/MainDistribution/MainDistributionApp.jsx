@@ -310,12 +310,14 @@ export function MainDistributionApp({ currentView, onViewToggle }) {
     }
   };
 
+  // 1. Update timestamp fields to standard ISO format for accurate sorting, while keeping display friendly keys
   const getTimestampFields = () => {
     const now = new Date();
     return {
-      Update_Date: now.toLocaleDateString("en-GB"),
+      Update_Date: now.toLocaleDateString("en-GB"), // For UI display
       Update_Day: now.toLocaleDateString("en-GB", { weekday: "long" }),
       Update_Time: now.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", second: "2-digit" }),
+      raw_timestamp: now.getTime(), // New helper field for robust sorting
     };
   };
 
@@ -425,10 +427,19 @@ export function MainDistributionApp({ currentView, onViewToggle }) {
     XLSX.writeFile(wb, `Distribution_Update_${new Date().toISOString().split("T")[0]}.xlsx`);
   };
 
+  // 2. Refactor recentUpdates sorting using the raw_timestamp or safe fallback
   const recentUpdates = React.useMemo(() => {
     return [...data]
-      .filter((item) => item.Update_Date && !dismissedRecentIds.has(item.HOF_ID))
-      .sort((a, b) => `${b.Update_Date} ${b.Update_Time}`.localeCompare(`${a.Update_Date} ${a.Update_Time}`))
+      .filter((item) => (item.Update_Date || item.raw_timestamp) && !dismissedRecentIds.has(item.HOF_ID))
+      .sort((a, b) => {
+        if (a.raw_timestamp && b.raw_timestamp) {
+          return b.raw_timestamp - a.raw_timestamp;
+        }
+        // Fallback if raw_timestamp is missing from older/imported data
+        const dateA = a.Update_Date ? new Date(a.Update_Date.split('/').reverse().join('-') + 'T' + a.Update_Time) : new Date(0);
+        const dateB = b.Update_Date ? new Date(b.Update_Date.split('/').reverse().join('-') + 'T' + b.Update_Time) : new Date(0);
+        return dateB - dateA;
+      })
       .slice(0, 5);
   }, [data, dismissedRecentIds]);
 
